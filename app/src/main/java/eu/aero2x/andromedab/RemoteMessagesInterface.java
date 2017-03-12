@@ -24,8 +24,7 @@ import java.util.Map;
  */
 
 public class RemoteMessagesInterface {
-    public final static String API_URL = "http://services.aero2x.eu:8735"; //"http://192.168.1.37:8735"; //API URL WITHOUT THE TRAILING SLASH. Example: http://yourdomain:port
-    public final static String WEBSOCKET_URI = "ws://imessage.services.aero2x.eu:8735/service";
+    public final static String API_URL = APP_CONSTANTS.API_URL; //API URL WITHOUT THE TRAILING SLASH. Example: http://yourdomain:port
 
     public static void messagesEndPointReachable(Context context, Response.Listener<String> onResponse,Response.ErrorListener onError) {
         // Instantiate the RequestQueue.
