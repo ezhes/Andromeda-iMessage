@@ -5,5 +5,5 @@ package eu.aero2x.andromedab;
  */
 
 public class APP_CONSTANTS_EXAMPLE_CHANGE_ME {
-    public static String API_URL = "http://services.aero2x.eu:8735"; //API URL WITHOUT THE TRAILING SLASH. Example: http://yourdomain:port
+    public static String API_URL = "http://ENTER_YOUR_DOMAIN_HERE:8735"; //API URL WITHOUT THE TRAILING SLASH. Example: http://yourdomain:port
 }
