@@ -14,7 +14,9 @@
         android:id="@+id/messagesList"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_above="@+id/input" />
+        android:layout_above="@+id/input"
+        app:outcomingDefaultBubbleColor="#1a73eb"
+        />
 
     <com.stfalcon.chatkit.messages.MessageInput
         android:id="@+id/input"
