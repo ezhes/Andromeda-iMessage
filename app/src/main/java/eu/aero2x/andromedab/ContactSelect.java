@@ -175,7 +175,8 @@ public class ContactSelect extends AppCompatActivity {
                             try {
                                 return Integer.compare(t1.getJSONObject("lastMessage").getInt("date"),t0.getJSONObject("lastMessage").getInt("date"));
                             }catch (JSONException e) {
-                                return 0;
+                                e.printStackTrace();
+                                return -1;
                             }
                         }
                     });

@@ -12,26 +12,23 @@ import android.widget.ImageView;
 
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
+import com.squareup.picasso.Picasso;
 import com.stfalcon.chatkit.commons.ImageLoader;
+import com.stfalcon.chatkit.commons.models.IMessage;
 import com.stfalcon.chatkit.commons.models.IUser;
 import com.stfalcon.chatkit.messages.MessageInput;
 import com.stfalcon.chatkit.messages.MessagesList;
 import com.stfalcon.chatkit.messages.MessagesListAdapter;
 
-import org.java_websocket.WebSocket;
 import org.java_websocket.client.WebSocketClient;
-import org.java_websocket.handshake.ServerHandshake;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.lang.reflect.Array;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Date;
 
-public class Conversation extends AppCompatActivity {
+public class Conversation extends AppCompatActivity implements MessagesListAdapter.OnMessageClickListener<CustomMessage> {
     public static String lastMessageGUID = ""; //The "last back" message which will have our delivery status, etc
     MessagesListAdapter messagesListAdapter;
     String hash;
@@ -69,7 +66,7 @@ public class Conversation extends AppCompatActivity {
             ImageLoader imageLoader = new ImageLoader() {
                 @Override
                 public void loadImage(ImageView imageView, String url) {
-                    //If you using another library - write here your way to load image
+                    Picasso.with(Conversation.this).load(url).into(imageView);
                 }
             };
 
@@ -77,6 +74,8 @@ public class Conversation extends AppCompatActivity {
             holdersConfig.setOutcoming(CustomOutgoingMessage.class,R.layout.custom_outgoing_message_holder);
             holdersConfig.setIncoming(CustomIncomingMessage.class,R.layout.custom_incoming_message_holder);
             messagesListAdapter = new MessagesListAdapter<>("0",holdersConfig, imageLoader); //0 here is the sender id which is always 0 with RemoteMessages
+            //Enable our tap to open images in browser
+            messagesListAdapter.setOnMessageClickListener(this);
             messagesList.setAdapter(messagesListAdapter);
 
             //Now we're ready, setup!
@@ -201,7 +200,8 @@ public class Conversation extends AppCompatActivity {
         final ArrayList<Message> messages = new ArrayList<>();
         try {
                 //We have a message. Let's add it.
-                messages.add(new Message() {
+                messages.add(new CustomMessage() {
+
                     @Override
                     public String getId() {
                         try {
@@ -216,6 +216,7 @@ public class Conversation extends AppCompatActivity {
                         String message = "";
                         try {
                             //Build our message
+                            //                            if (messageBundle.getString("uti").contains("png") || messageBundle.getString("uti").contains("jpeg") || messageBundle.getString("uti").contains("gif")) {
                             if (messageBundle.getBoolean("has_attachments")) {
                                 //Build our url to show the attachment in the browser
                                 message = Uri.parse(RemoteMessagesInterface.API_URL + "/attachment").buildUpon().appendQueryParameter("id", messageBundle.getString("attachment_id")).toString();
@@ -313,6 +314,20 @@ public class Conversation extends AppCompatActivity {
                         }
                     }
 
+                    @Override
+                    public String getImageUrl() {
+                        try {
+                            //Check if we have a resource that can by loaded inline
+                            if (messageBundle.getString("uti").contains("png") || messageBundle.getString("uti").contains("jpeg") || messageBundle.getString("uti").contains("gif")) {
+                                //We have a valid loadable image. Let's build the uri
+                                return RemoteMessagesInterface.API_URL + "/attachment?id=" + messageBundle.getString("attachment_id");
+                            }else {
+                                Log.d("GetImageURL","Didn't support the image type: " + messageBundle.getString("uri"));
+                            }
+                        }catch (JSONException e) {}
+                        //If we're here we didn't have a valid image.
+                        return null;
+                    }
                 });
 
             //Store our last back GUID so we know who to display labels on
@@ -327,5 +342,15 @@ public class Conversation extends AppCompatActivity {
         }
     }
 
+    @Override
+    public void onMessageClick(CustomMessage message) {
+        //Grab our URL if we have it
+        String imageUrlIfExsists = message.getImageUrl();
+        if (imageUrlIfExsists != null) {
+            //We have an image. They've tapped the image so we want to open it in the browser
+            Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(imageUrlIfExsists));
+            startActivity(browserIntent);
+        }
+    }
 
 }
