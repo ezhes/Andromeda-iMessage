@@ -12,6 +12,7 @@ import android.widget.ImageView;
 
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
+import com.google.firebase.analytics.FirebaseAnalytics;
 import com.squareup.picasso.Picasso;
 import com.stfalcon.chatkit.commons.ImageLoader;
 import com.stfalcon.chatkit.commons.models.IMessage;
@@ -39,11 +40,14 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
     JSONObject parentConversation;
     public static ArrayList<Message> messageDataStore; //Hold all our message data
     private WebSocketClient mWebSocketClient = null;
+    private FirebaseAnalytics mFirebaseAnalytics;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_conversation);
+        // Obtain the FirebaseAnalytics instance.
+        mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         //Start to pull out our data
         Bundle extras = getIntent().getExtras();
         if (extras != null) {
