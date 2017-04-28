@@ -51,6 +51,3 @@ crashlytics.properties
 crashlytics-build.properties
 fabric.properties
 
-#configuration files for the app
-app/src/main/java/eu/aero2x/andromedab/APP_CONSTANTS.java 
-/app/src/main/java/eu/aero2x/andromedab/APP_CONSTANTS.java
