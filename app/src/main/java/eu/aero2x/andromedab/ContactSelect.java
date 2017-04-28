@@ -10,6 +10,7 @@ import android.widget.ImageView;
 
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
+import com.google.firebase.analytics.FirebaseAnalytics;
 import com.stfalcon.chatkit.commons.ImageLoader;
 import com.stfalcon.chatkit.commons.models.IDialog;
 import com.stfalcon.chatkit.commons.models.IMessage;
@@ -33,6 +34,7 @@ public class ContactSelect extends AppCompatActivity {
     ArrayList<IDialog> conversationList;
     ArrayList<JSONObject> conversationDataSource;
     private String incomingNotificationContact = "";
+    private FirebaseAnalytics mFirebaseAnalytics;
 
 
     @Override
@@ -44,6 +46,9 @@ public class ContactSelect extends AppCompatActivity {
         //Do we have a payload AND do we have a contact name?
         if (data != null && data.getLastPathSegment() != null) {
             Log.d("onNewIntent", "Launching with " + data.getLastPathSegment());
+            Bundle bundle = new Bundle();
+            bundle.putString(FirebaseAnalytics.Param.GROUP_ID, "Launched from notification");
+            mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
             //Store our request and parse out broken characters since that's what the menu is
             incomingNotificationContact = data.getLastPathSegment().replaceAll("[^\\x00-\\x7F]", "");
             //Check if we need to load first if we've launched
@@ -64,6 +69,7 @@ public class ContactSelect extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_contact_select);
+        mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         //Check for our conversation intents
         onNewIntent(this.getIntent());
         //Setup our conversation UI
