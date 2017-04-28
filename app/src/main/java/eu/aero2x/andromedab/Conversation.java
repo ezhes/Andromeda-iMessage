@@ -219,7 +219,7 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
                             //                            if (messageBundle.getString("uti").contains("png") || messageBundle.getString("uti").contains("jpeg") || messageBundle.getString("uti").contains("gif")) {
                             if (messageBundle.getBoolean("has_attachments")) {
                                 //Build our url to show the attachment in the browser
-                                message = Uri.parse(RemoteMessagesInterface.API_URL + "/attachment").buildUpon().appendQueryParameter("id", messageBundle.getString("attachment_id")).toString();
+                                message = Uri.parse(RemoteMessagesInterface.API_URL + "/attachment").buildUpon().appendQueryParameter("id", messageBundle.getString("attachment_id")).appendQueryParameter("t",APP_CONSTANTS.API_PROTECTION_TOKEN).toString();
                             }
 
                             String messageText = messageBundle.getString("text");
@@ -320,7 +320,7 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
                             //Check if we have a resource that can by loaded inline
                             if (messageBundle.getString("uti").contains("png") || messageBundle.getString("uti").contains("jpeg") || messageBundle.getString("uti").contains("gif")) {
                                 //We have a valid loadable image. Let's build the uri
-                                return RemoteMessagesInterface.API_URL + "/attachment?id=" + messageBundle.getString("attachment_id");
+                                return RemoteMessagesInterface.API_URL + "/attachment?id=" + messageBundle.getString("attachment_id") + "&t=" + APP_CONSTANTS.API_PROTECTION_TOKEN;
                             }else {
                                 Log.d("GetImageURL","Didn't support the image type: " + messageBundle.getString("uri"));
                             }

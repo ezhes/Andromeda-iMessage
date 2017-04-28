@@ -21,8 +21,8 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:host="imessage.services.aero2x.eu" android:port="8735" android:scheme="http" />
-                <data android:host="imessage.services.aero2x.eu" android:port="8735" android:scheme="https"/>
+                <data android:host="i.eu" android:scheme="http" />
+                <data android:host="i.eu" android:scheme="https"/>
             </intent-filter>
         </activity>
         <activity android:name=".Conversation"></activity>

@@ -105,6 +105,7 @@ public class ContactSelect extends AppCompatActivity {
                 //We couldn't connect, die.
                 String err = (error.toString()==null)?"Generic network error":error.toString();
                 UITools.showDismissableSnackBar(findViewById(android.R.id.content),"Unable to connect!\n" + err);
+                error.printStackTrace();
             }
         });
     }
@@ -173,6 +174,8 @@ public class ContactSelect extends AppCompatActivity {
                         @Override
                         public int compare(JSONObject t0, JSONObject t1) {
                             try {
+                                System.out.println("t0:" + t0);
+                                System.out.println("t1:" + t1);
                                 return Integer.compare(t1.getJSONObject("lastMessage").getInt("date"),t0.getJSONObject("lastMessage").getInt("date"));
                             }catch (JSONException e) {
                                 e.printStackTrace();
