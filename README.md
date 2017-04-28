@@ -15,9 +15,8 @@ A named iMessage Group|  Inline photos!
 ### Configuration / Setup!
 
 1. Setup the MessageProxy first on a server first. 
-2. Clone the repo, open in Android Studio
-3. Duplicate the file named `APP_CONSTANTS_EXAMPLE_CHANGE_ME` and rename it to just `APP_CONSTANTS`
-4. Open aforesaid file and fill in your full API url. You'll want some sort of domain which will resolve both internally and externally. Setup a DNS server at home if needed. Fill in the *exact* same API protection token as you did previously. Remember, absolutely no special chars or spaces. Just A-z and 0-9. If you file an issue and your token includes this I will punch you in the face through your computer.
+2. [Download and install the latest client](https://github.com/shusain93/Andromeda-iMessage/releases) or build from source
+4. Open the app and fill out the configuration. You'll want some sort of domain which will resolve both internally and externally. Setup a DNS server at home if needed. Fill in the *exact* same API protection token as you did previously. Remember, absolutely no special chars or spaces. Just A-z and 0-9. If you file an issue and your token includes this I will punch you in the face through your computer.
 5. Install Pushbullet on your phone, sign in with the same account as you setup with IFTTT (or setup with some other push service, that's on you. I picked IFTTT because it's a very general API and you can pick how you get your notifications i.e. flashing your coffee pot)
 6. Build and run on to your Android device. Mind you, this is for a high API target so if you're on KitKat shucks to your ducks
 7. Hopefully it should work at this point. It works for me and I use it everyday so it's mildly unlikely there is a major connection bug here so if it doesn't get your messages check all your config files.

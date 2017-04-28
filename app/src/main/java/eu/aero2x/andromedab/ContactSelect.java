@@ -1,12 +1,18 @@
 package eu.aero2x.andromedab;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.InputType;
 import android.util.Log;
+import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
@@ -71,6 +77,63 @@ public class ContactSelect extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_contact_select);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
+        //Load our config database
+        final SharedPreferences sharedPreferences = getSharedPreferences("CONFIG",MODE_PRIVATE);
+        //Check if we are not yet setup
+        if (sharedPreferences.getString("apiEndpoint",null) == null) {
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            //you should edit this to fit your needs
+            builder.setTitle("Andromeda Configuration");
+            builder.setMessage("To use Andromeda you must have a server running OSXMessageProxy. Enter the FULL API endpoint URL (i.e. http://<domain>:port) without any trailing slashes. In the next text field, enter your API key/password which you have selected. Make sure that all the data you enter is correct because it will not be validated and you will have to delete and re-install the app to reconfigure");
+
+            final EditText apiText = new EditText(this);
+            apiText.setHint("http://your.domain.com:8735");//optional
+            final EditText apiProtectionKey = new EditText(this);
+            apiProtectionKey.setHint("API key AS IT IS SET IN CONFIG.plist");//optional
+
+            //in my example i use TYPE_CLASS_NUMBER for input only numbers
+            apiText.setInputType(InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS);
+            apiProtectionKey.setInputType(InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+
+            LinearLayout lay = new LinearLayout(this);
+            lay.setOrientation(LinearLayout.VERTICAL);
+            lay.addView(apiText);
+            lay.addView(apiProtectionKey);
+            builder.setView(lay);
+
+            // Set up the buttons
+            builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int whichButton) {
+                    String givenEndPoint = apiText.getText().toString().trim();
+                    String givenKey = apiProtectionKey.getText().toString().trim();
+                    SharedPreferences.Editor editor = getSharedPreferences("CONFIG", MODE_PRIVATE).edit();
+                    editor.putString("apiEndpoint",givenEndPoint);
+                    editor.putString("apiProtectionKey",givenKey);
+                    //Write sync because we need this done before we can keep going
+                    editor.commit();
+                    //We're ready
+                    prepareView();
+                }
+            });
+
+            builder.setNegativeButton("Exit", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int whichButton) {
+                    finish();
+                }
+            });
+            builder.show();
+        }else {
+            //We have already configured
+            prepareView();
+        }
+    }
+
+    private void prepareView() {
+        //Prepare our APP_CONSTANTS
+        final SharedPreferences sharedPreferences = getSharedPreferences("CONFIG",MODE_PRIVATE);
+        APP_CONSTANTS.API_URL = sharedPreferences.getString("apiEndpoint","http://no.stored.url.com");
+        APP_CONSTANTS.API_PROTECTION_TOKEN = sharedPreferences.getString("apiProtectionKey","noStoredProtectionToken");
         //Check for our conversation intents
         onNewIntent(this.getIntent());
         //Setup our conversation UI
@@ -93,28 +156,28 @@ public class ContactSelect extends AppCompatActivity {
                 bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "Trying to show a conversation");
                 mFirebaseAnalytics.logEvent("show_conversation", bundle);
                 Intent i = new Intent(getApplicationContext(), Conversation.class);
-                i.putExtra("conversationJSONString",conversationDataSource.get(Integer.valueOf(dialog.getId())).toString()); //send our conversation's JSON along
-                startActivityForResult(i,UITools.DATA_NEEDS_REFRESH);
+                i.putExtra("conversationJSONString", conversationDataSource.get(Integer.valueOf(dialog.getId())).toString()); //send our conversation's JSON along
+                startActivityForResult(i, UITools.DATA_NEEDS_REFRESH);
             }
         });
         dialogsListView.setAdapter(dialogsListAdapter);
 
-        RemoteMessagesInterface.messagesEndPointReachable(this,new Response.Listener<String>() {
+        RemoteMessagesInterface.messagesEndPointReachable(this, new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
                 //We are online!
-                UITools.showSnackBar(findViewById(android.R.id.content),"Successfully connected!", Snackbar.LENGTH_LONG);
+                UITools.showSnackBar(findViewById(android.R.id.content), "Successfully connected!", Snackbar.LENGTH_LONG);
 
                 //Since we can see the server, setup our contacts
                 setupConversations();
 
             }
-        },  new Response.ErrorListener() {
+        }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
                 //We couldn't connect, die.
-                String err = (error.toString()==null)?"Generic network error":error.toString();
-                UITools.showDismissableSnackBar(findViewById(android.R.id.content),"Unable to connect!\n" + err);
+                String err = (error.toString() == null) ? "Generic network error" : error.toString();
+                UITools.showDismissableSnackBar(findViewById(android.R.id.content), "Unable to connect!\n" + err);
                 error.printStackTrace();
             }
         });
