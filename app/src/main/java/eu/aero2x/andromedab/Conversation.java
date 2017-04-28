@@ -13,6 +13,7 @@ import android.widget.ImageView;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.google.firebase.crash.FirebaseCrash;
 import com.squareup.picasso.Picasso;
 import com.stfalcon.chatkit.commons.ImageLoader;
 import com.stfalcon.chatkit.commons.models.IMessage;
@@ -108,6 +109,9 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
                         "    \"date_delivered\" : 0,\n" +
                         "    \"has_attachments\" : false\n " +
                         "  }";
+                Bundle bundle = new Bundle();
+                bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "Send message");
+                mFirebaseAnalytics.logEvent("message_send", bundle);
                 try {
                     JSONObject messageBundle = new JSONObject(messageString);
                     //"convert" our json into messages. This is wasteful but updates everything I've already set up to keep last back properly
@@ -145,6 +149,8 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
                 }catch (JSONException e) {
                     //We should never get here. The json is manually generated and works
                     e.printStackTrace();
+                    FirebaseCrash.log("JSON message bundle generator broke:"+ messageString);
+                    FirebaseCrash.report(e);
                     UITools.showDismissableSnackBar(findViewById(android.R.id.content),"Somethings really broke\nThe JSON send generator broke!");
                 }
                 return true;
@@ -187,6 +193,8 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
                     messagesListAdapter.addToEnd(messageDataStore,true); //reverse true to get latest at bottom
                 }catch (JSONException exception) {
                     UITools.showDismissableSnackBar(findViewById(android.R.id.content),"Unable to parse json data\n" + exception.toString());
+                    FirebaseCrash.log("Couldn't parse messagebundle");
+                    FirebaseCrash.report(exception);
                     exception.printStackTrace();
                     Log.w("MessageParserDis","Could parse message " + exception.toString());
                 }

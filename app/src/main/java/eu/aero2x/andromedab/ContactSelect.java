@@ -11,6 +11,7 @@ import android.widget.ImageView;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.google.firebase.crash.FirebaseCrash;
 import com.stfalcon.chatkit.commons.ImageLoader;
 import com.stfalcon.chatkit.commons.models.IDialog;
 import com.stfalcon.chatkit.commons.models.IMessage;
@@ -47,8 +48,8 @@ public class ContactSelect extends AppCompatActivity {
         if (data != null && data.getLastPathSegment() != null) {
             Log.d("onNewIntent", "Launching with " + data.getLastPathSegment());
             Bundle bundle = new Bundle();
-            bundle.putString(FirebaseAnalytics.Param.GROUP_ID, "Launched from notification");
-            mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
+            bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "View notification");
+            mFirebaseAnalytics.logEvent("launch_with_notification", bundle);
             //Store our request and parse out broken characters since that's what the menu is
             incomingNotificationContact = data.getLastPathSegment().replaceAll("[^\\x00-\\x7F]", "");
             //Check if we need to load first if we've launched
@@ -88,6 +89,9 @@ public class ContactSelect extends AppCompatActivity {
         dialogsListAdapter.setOnDialogClickListener(new DialogsListAdapter.OnDialogClickListener<IDialog>() {
             @Override
             public void onDialogClick(IDialog dialog) {
+                Bundle bundle = new Bundle();
+                bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "Trying to show a conversation");
+                mFirebaseAnalytics.logEvent("show_conversation", bundle);
                 Intent i = new Intent(getApplicationContext(), Conversation.class);
                 i.putExtra("conversationJSONString",conversationDataSource.get(Integer.valueOf(dialog.getId())).toString()); //send our conversation's JSON along
                 startActivityForResult(i,UITools.DATA_NEEDS_REFRESH);
@@ -127,6 +131,9 @@ public class ContactSelect extends AppCompatActivity {
      */
     private void tryToShowConversationWithContactName() {
         Log.d("Contacts","Trying to show!");
+        Bundle bundle = new Bundle();
+        bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "Trying to show a conversation based on contact name");
+        mFirebaseAnalytics.logEvent("show_conversation", bundle);
         boolean foundConversation = false; //Are we successfull?
         for (int i = 0; i != conversationList.size(); i++) { //Integrate all conversationJSONDatabase starting from top. We prioritize latest per WARNINGS above
                 //Check if our search term is in the conversation name
@@ -146,7 +153,9 @@ public class ContactSelect extends AppCompatActivity {
                     //And kill the loop
                     break;
                 }
-            }catch (JSONException e) {Log.w("ContactNotifier","Couldn't find IDs for " + i);}
+            }catch (JSONException e) {
+                FirebaseCrash.logcat(Log.WARN,"ContactNotifier","Couldn't find IDs for " + i);
+                FirebaseCrash.report(e);}
         }
 
         //Check if we succeed
@@ -162,7 +171,6 @@ public class ContactSelect extends AppCompatActivity {
             @Override
             public void onResponse(String response) {
                 try {
-                    System.out.println(response);
                     final JSONArray conversationJSONDatabase = new JSONArray(response);
 
                     //Create our storage
@@ -180,11 +188,11 @@ public class ContactSelect extends AppCompatActivity {
                         @Override
                         public int compare(JSONObject t0, JSONObject t1) {
                             try {
-                                System.out.println("t0:" + t0);
-                                System.out.println("t1:" + t1);
                                 return Integer.compare(t1.getJSONObject("lastMessage").getInt("date"),t0.getJSONObject("lastMessage").getInt("date"));
                             }catch (JSONException e) {
                                 e.printStackTrace();
+                                FirebaseCrash.log("Compare failed");
+                                FirebaseCrash.report(e);
                                 return -1;
                             }
                         }
@@ -212,6 +220,8 @@ public class ContactSelect extends AppCompatActivity {
                                 try {
                                     return conversation.getString("display_name");
                                 }catch (JSONException e) {
+                                    FirebaseCrash.log("Nameless chat error");
+                                    FirebaseCrash.report(e);
                                     return "Nameless chat error";
                                 }
                             }
@@ -318,6 +328,8 @@ public class ContactSelect extends AppCompatActivity {
                         tryToShowConversationWithContactName();
                     }
                 } catch (JSONException e) {
+                    FirebaseCrash.log("Couldn't parse conversation json");
+                    FirebaseCrash.report(e);
                     UITools.showDismissableSnackBar(findViewById(android.R.id.content),"JSON error:\n" + e.toString());
                 }
             }

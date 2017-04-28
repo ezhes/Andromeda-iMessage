@@ -21,3 +21,7 @@ A named iMessage Group|  Inline photos!
 5. Install Pushbullet on your phone, sign in with the same account as you setup with IFTTT (or setup with some other push service, that's on you. I picked IFTTT because it's a very general API and you can pick how you get your notifications i.e. flashing your coffee pot)
 6. Build and run on to your Android device. Mind you, this is for a high API target so if you're on KitKat shucks to your ducks
 7. Hopefully it should work at this point. It works for me and I use it everyday so it's mildly unlikely there is a major connection bug here so if it doesn't get your messages check all your config files.
+
+#### Crash reporting/analytics
+
+I have setup Firebase crash and session analytics. Nothing personally identifiable is being stolen away (you can check through the code!) but if you are still not comfortable with this you can easily disable tracking globally by editing `AndroidManifest.xml`'s `firebase_analytics_collection_deactivated` key to be `true`. Given that this is extreme beta, I'd recommend that you don't do this since I need crash reporting to make this better but I of course realize that messaging is a very sensitive data.
