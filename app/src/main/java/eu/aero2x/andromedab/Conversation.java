@@ -16,7 +16,6 @@ import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.crash.FirebaseCrash;
 import com.squareup.picasso.Picasso;
 import com.stfalcon.chatkit.commons.ImageLoader;
-import com.stfalcon.chatkit.commons.models.IMessage;
 import com.stfalcon.chatkit.commons.models.IUser;
 import com.stfalcon.chatkit.messages.MessageInput;
 import com.stfalcon.chatkit.messages.MessagesList;
@@ -49,6 +48,8 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
         setContentView(R.layout.activity_conversation);
         // Obtain the FirebaseAnalytics instance.
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
+
+
         //Start to pull out our data
         Bundle extras = getIntent().getExtras();
         if (extras != null) {

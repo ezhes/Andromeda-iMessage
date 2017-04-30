@@ -16,6 +16,8 @@ import android.widget.LinearLayout;
 
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
+import com.github.javiersantos.appupdater.AppUpdater;
+import com.github.javiersantos.appupdater.enums.UpdateFrom;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.crash.FirebaseCrash;
 import com.stfalcon.chatkit.commons.ImageLoader;
@@ -77,6 +79,11 @@ public class ContactSelect extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_contact_select);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
+        //Setup our update from github
+        new AppUpdater(this)
+                .setUpdateFrom(UpdateFrom.GITHUB)
+                .setGitHubUserAndRepo("shusain93", "Andromeda-iMessage").showEvery(5)
+                .start();
         //Load our config database
         final SharedPreferences sharedPreferences = getSharedPreferences("CONFIG",MODE_PRIVATE);
         //Check if we are not yet setup
@@ -200,7 +207,6 @@ public class ContactSelect extends AppCompatActivity {
         boolean foundConversation = false; //Are we successfull?
         for (int i = 0; i != conversationList.size(); i++) { //Integrate all conversationJSONDatabase starting from top. We prioritize latest per WARNINGS above
                 //Check if our search term is in the conversation name
-            System.out.println(conversationList.get(i).getDialogPhoto());
             try {
                 String conversationLabel = conversationDataSource.get(i).getString("IDs");
                 if (conversationLabel.contains(incomingNotificationContact)) {
