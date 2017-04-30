@@ -20,6 +20,7 @@ import com.github.javiersantos.appupdater.AppUpdater;
 import com.github.javiersantos.appupdater.enums.UpdateFrom;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.crash.FirebaseCrash;
+import com.google.firebase.iid.FirebaseInstanceId;
 import com.stfalcon.chatkit.commons.ImageLoader;
 import com.stfalcon.chatkit.commons.models.IDialog;
 import com.stfalcon.chatkit.commons.models.IMessage;
@@ -84,6 +85,7 @@ public class ContactSelect extends AppCompatActivity {
                 .setUpdateFrom(UpdateFrom.GITHUB)
                 .setGitHubUserAndRepo("shusain93", "Andromeda-iMessage").showEvery(5)
                 .start();
+        System.out.println("Firebase notification token:" + FirebaseInstanceId.getInstance().getToken());
         //Load our config database
         final SharedPreferences sharedPreferences = getSharedPreferences("CONFIG",MODE_PRIVATE);
         //Check if we are not yet setup
