@@ -28,5 +28,9 @@ public interface Message extends IMessage {
      */
     boolean isDelivered();
 
-
+    /**
+     * Has the message been sent on the server?
+     * @return
+     */
+    boolean isSent();
 }

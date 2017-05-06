@@ -21,7 +21,6 @@ import com.stfalcon.chatkit.messages.MessageInput;
 import com.stfalcon.chatkit.messages.MessagesList;
 import com.stfalcon.chatkit.messages.MessagesListAdapter;
 
-import org.java_websocket.client.WebSocketClient;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -39,8 +38,10 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
 
     JSONObject parentConversation;
     public static ArrayList<Message> messageDataStore; //Hold all our message data
-    private WebSocketClient mWebSocketClient = null;
+    public SocketClient socketClient;
     private FirebaseAnalytics mFirebaseAnalytics;
+
+    private String latestConversationData = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -88,6 +89,9 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
             setupMessages();
         }else {
             UITools.showDismissableSnackBar(findViewById(android.R.id.content),"Missing conversation hash, did you launch normally?");
+            Bundle bundle = new Bundle();
+            bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "Missing conversation hash, did you launch normally?");
+            mFirebaseAnalytics.logEvent("missing_conversation_hash", bundle);
         }
 
         //Setup our input bar
@@ -102,14 +106,16 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
                         "    \"human_name\" : \" \",\n" +
                         "    \"date_read\" : 0,\n" +
                         "    \"message_id\" : 0000,\n" +
-                        "    \"date\" : "+ ((System.currentTimeMillis()/1000)-978307200L) + ",\n" + //Convert epoch to cocoa
-                        "    \"text\" : \"" + input.toString().replace("\"","\\\"") +"\",\n" +
+                        "    \"date\" : "+ ((System.currentTimeMillis())/1000-978307200L) + ",\n" + //Convert epoch to cocoa
+                        "    \"text\" : \"" + input.toString().replace("\\","\\\\").replace("\"","\\\"").replace("\n","\\n") +"\",\n" + //manually escape for JSON. It's bad but unexploitable
                         "    \"is_from_me\" : 1,\n" +
                         "    \"error\" : 0,\n" +
-                        "    \"guid\" : \"----3-------\",\n" +
+                        "    \"guid\" : \"notSent"+ (int)(Math.random()*2000) + "\",\n" + //random bit so we can be sure we replace the right GUID
                         "    \"date_delivered\" : 0,\n" +
+                        "    \"is_sent\" : 0,\n" +
                         "    \"has_attachments\" : false\n " +
                         "  }";
+                System.out.println("TIMESTAMP:" + ((System.currentTimeMillis())/1000-978307200L));
                 Bundle bundle = new Bundle();
                 bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "Send message");
                 mFirebaseAnalytics.logEvent("message_send", bundle);
@@ -133,7 +139,7 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
                         @Override
                         public void onResponse(String response) {
                             //The message sent!
-                            UITools.showSnackBar(findViewById(android.R.id.content),"Sent!", Snackbar.LENGTH_SHORT);
+                            UITools.showSnackBar(findViewById(android.R.id.content),"Dispatched!", Snackbar.LENGTH_SHORT);
 
 
                         }
@@ -160,20 +166,84 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
     }
 
 
+
     @Override
-    public void onStop(){
-        super.onStop();
-        Log.d("Conversation","ON STOP");
-        //Close our websocket
-        if (mWebSocketClient != null) {
-            mWebSocketClient.close();
+    public void onPause() {
+        super.onPause();  // Always call the superclass method first
+        Log.d("onPauseConversation","SUSPENDING SOCKET");
+        if (socketClient != null && socketClient.socketThread != null) {
+            socketClient.socketThread.cancel(false);
         }
+    }
+    @Override
+    public void onBackPressed() {
+        Bundle bundle = new Bundle();
+        if (!latestConversationData.equals("")) {
+            bundle.putString("latestSocketConversationData",latestConversationData);
+        }
+        Intent mIntent = new Intent();
+        mIntent.putExtras(bundle);
+        setResult(UITools.DATA_NEEDS_REFRESH, mIntent);
+        super.onBackPressed();
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        Log.d("Conversation","On resume");
+        if (socketClient != null && socketClient.socketThread.isCancelled() == false) {
+            socketClient.socketThread.cancel(false);
+        }
+
+        socketClient = new SocketClient(APP_CONSTANTS.SERVER_IP, APP_CONSTANTS.SERVER_SOCKET_PORT, new SocketResponseHandler() {
+
+            @Override
+            public void handleResponse(final String response) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        try {
+                            JSONObject bundle = new JSONObject(response);
+                            if (bundle.getString("type").equals("newMessage")) {
+                                //New message
+                                JSONObject messageBundle = bundle.getJSONArray("content").getJSONObject(0);
+                                if (messageBundle.getInt("chat_id") == Integer.parseInt(hash)) {
+                                    //We have a message from our conversation...
+                                    ArrayList<Message> newMessages = parseMessageBundle(messageBundle);
+                                    messageDataStore.addAll(newMessages); //Build our new ones in
+                                    messagesListAdapter.addToStart(newMessages.get(0),true); //reverse true to get latest at bottom
+                                }
+                            }else if (bundle.getString("type").equals("messageSent")) {
+                                //We Sent!
+                                JSONObject messageBundle = bundle.getJSONArray("content").getJSONObject(0);
+                                System.out.println(Integer.parseInt(hash) + " " + messageBundle.getInt("chat_id"));
+                                if (messageBundle.getInt("chat_id") == Integer.parseInt(hash)) {
+                                    for (Message m : messageDataStore) {
+                                        System.out.println(m.getText().trim() + "=="+messageBundle.getString("text"));
+                                        if (m.getId().contains("notSent") && m.getText().trim().equals(messageBundle.getString("text").trim())) {
+                                            System.out.println("!!! match");
+                                            ArrayList<Message> newMessages = parseMessageBundle(messageBundle);
+                                            messagesListAdapter.update(m.getId(),newMessages.get(0));
+                                            break;
+                                        }
+                                    }
+                                }
+                            }else if (bundle.getString("type").equals("messageSendFailure")) {
+                                //We couldn't send
+                            }else if (bundle.getString("type").equals("conversations")) {
+                                //Since we close the parent socket each time we restart we need to keep tabs on the conversations for them, which means letting the parent know about knew conversation changes
+                                latestConversationData = bundle.getJSONArray("content").toString();
+                            }
+                        }catch (JSONException e) {
+                            Log.d("handleSocket","failed to parse bundle " + response);
+                            e.printStackTrace();
+                        }
+
+                    }
+                });
+            }
+        });
+
     }
 
     private void setupMessages() {
@@ -194,7 +264,7 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
                     messagesListAdapter.addToEnd(messageDataStore,true); //reverse true to get latest at bottom
                 }catch (JSONException exception) {
                     UITools.showDismissableSnackBar(findViewById(android.R.id.content),"Unable to parse json data\n" + exception.toString());
-                    FirebaseCrash.log("Couldn't parse messagebundle");
+                    FirebaseCrash.log("Couldn't parse messagebundle:" + response);
                     FirebaseCrash.report(exception);
                     exception.printStackTrace();
                     Log.w("MessageParserDis","Could parse message " + exception.toString());
@@ -212,136 +282,144 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
     private ArrayList<Message> parseMessageBundle (final JSONObject messageBundle) {
         final ArrayList<Message> messages = new ArrayList<>();
         try {
-                //We have a message. Let's add it.
-                messages.add(new CustomMessage() {
+            //We have a message. Let's add it.
+            messages.add(new CustomMessage() {
 
-                    @Override
-                    public String getId() {
-                        try {
-                            return messageBundle.getString("guid");
-                        }catch (JSONException e) {
-                            return "no id error";
-                        }
+                @Override
+                public String getId() {
+                    try {
+                        return messageBundle.getString("guid");
+                    }catch (JSONException e) {
+                        return "no id error";
                     }
+                }
 
-                    @Override
-                    public String getText() {
-                        String message = "";
-                        try {
-                            //Build our message
-                            //                            if (messageBundle.getString("uti").contains("png") || messageBundle.getString("uti").contains("jpeg") || messageBundle.getString("uti").contains("gif")) {
+                @Override
+                public String getText() {
+                    String message = "";
+                    try {
+                        //Build our message
+                        if (messageBundle.getBoolean("has_attachments")) {
+                            //Build our url to show the attachment in the browser
+                            message = Uri.parse(RemoteMessagesInterface.API_URL + "/attachment").buildUpon().appendQueryParameter("id", messageBundle.getString("attachment_id")).appendQueryParameter("t",APP_CONSTANTS.SERVER_PROTECTION_TOKEN).toString();
+                        }
+
+                        String messageText = messageBundle.getString("text");
+
+                        if (!messageText.equals("")) {
                             if (messageBundle.getBoolean("has_attachments")) {
-                                //Build our url to show the attachment in the browser
-                                message = Uri.parse(RemoteMessagesInterface.API_URL + "/attachment").buildUpon().appendQueryParameter("id", messageBundle.getString("attachment_id")).appendQueryParameter("t",APP_CONSTANTS.API_PROTECTION_TOKEN).toString();
-                            }
-
-                            String messageText = messageBundle.getString("text");
-
-                            if (!messageText.equals("")) {
-                                if (messageBundle.getBoolean("has_attachments")) {
-                                    //Text + attachment
-                                    message = message + "\n" + messageText;
-                                }else {
-                                    //We have text and there is no attachment
-                                    message = messageText;
-                                }
-                            }//No text, nothing to do
-
-                        }catch (JSONException e) {
-                            e.printStackTrace();
-                            message = "Couldn't read message text!";
-                        }
-                        return message;
-
-                    }
-
-                    @Override
-                    public IUser getUser() {
-                        return new IUser() {
-                            @Override
-                            public String getId() {
-                                try {
-                                    if (messageBundle.getInt("is_from_me") == 1) {
-                                        return "0";
-                                    }else {
-                                        return messageBundle.getString("sender");
-                                    }
-                                }catch (JSONException e) {
-                                    Log.w("Conversation,getID","No part id");
-                                    return "no part id error";
-                                }
-
-                            }
-
-                            @Override
-                            public String getName() {
-                                String id = getId();
-                                try {
-                                    return messageBundle.getString("human_name");
-                                }catch (JSONException e) {
-                                    return "???:" + id;
-                                }
-                            }
-
-                            @Override
-                            public String getAvatar() {
-                                return null;
-                            }
-                        };
-
-                    }
-
-                    @Override
-                    public Date getCreatedAt() {
-                        try {
-                            return new Date((messageBundle.getInt("date") + 978307200L)*1000);
-                        }catch (JSONException e) {
-                            Log.w("Conversation,getDate","No date");
-                            return new Date();
-                        }
-                    }
-                    @Override
-                    public String getTimeRead() {
-                        try {
-                            return ""+messageBundle.getInt("date_read");
-                        }catch (JSONException e) {
-                            return null; //No time read, null
-                        }
-                    }
-
-                    @Override
-                    public boolean isRead() {
-                        try {
-
-                            return messageBundle.getInt("date_read") > 0; //if this we have a date value and it's positive we've been read
-                        }catch (JSONException e) {
-                            return false;
-                        }
-                    }
-                    @Override
-                    public boolean isDelivered() {
-                        try {
-                            return messageBundle.getInt("date_delivered") > 0;
-                        }catch (JSONException e) {
-                            return false;
-                        }
-                    }
-
-                    @Override
-                    public String getImageUrl() {
-                        try {
-                            //Check if we have a resource that can by loaded inline
-                            if (messageBundle.getString("uti").contains("png") || messageBundle.getString("uti").contains("jpeg") || messageBundle.getString("uti").contains("gif")) {
-                                //We have a valid loadable image. Let's build the uri
-                                return RemoteMessagesInterface.API_URL + "/attachment?id=" + messageBundle.getString("attachment_id") + "&t=" + APP_CONSTANTS.API_PROTECTION_TOKEN;
+                                //Text + attachment
+                                message = message + "\n" + messageText;
                             }else {
-                                Log.d("GetImageURL","Didn't support the image type: " + messageBundle.getString("uri"));
+                                //We have text and there is no attachment
+                                message = messageText;
                             }
-                        }catch (JSONException e) {}
-                        //If we're here we didn't have a valid image.
-                        return null;
+                        }//No text, nothing to do
+
+                    }catch (JSONException e) {
+                        e.printStackTrace();
+                        message = "Couldn't read message text!";
                     }
-                });
+                    return message;
+
+                }
+
+                @Override
+                public IUser getUser() {
+                    return new IUser() {
+                        @Override
+                        public String getId() {
+                            try {
+                                if (messageBundle.getInt("is_from_me") == 1) {
+                                    return "0";
+                                }else {
+                                    return messageBundle.getString("sender");
+                                }
+                            }catch (JSONException e) {
+                                Log.w("Conversation,getID","No part id");
+                                return "no part id error";
+                            }
+
+                        }
+
+                        @Override
+                        public String getName() {
+                            String id = getId();
+                            try {
+                                return messageBundle.getString("human_name");
+                            }catch (JSONException e) {
+                                return "???:" + id;
+                            }
+                        }
+
+                        @Override
+                        public String getAvatar() {
+                            return null;
+                        }
+                    };
+
+                }
+
+                @Override
+                public Date getCreatedAt() {
+                    try {
+                        return new Date((messageBundle.getInt("date") + 978307200L)*1000);
+                    }catch (JSONException e) {
+                        Log.w("Conversation,getDate","No date");
+                        return new Date();
+                    }
+                }
+                @Override
+                public String getTimeRead() {
+                    try {
+                        return ""+messageBundle.getInt("date_read");
+                    }catch (JSONException e) {
+                        return null; //No time read, null
+                    }
+                }
+
+                @Override
+                public boolean isRead() {
+                    try {
+
+                        return messageBundle.getInt("date_read") > 0; //if this we have a date value and it's positive we've been read
+                    }catch (JSONException e) {
+                        return false;
+                    }
+                }
+                @Override
+                public boolean isDelivered() {
+                    try {
+                        return messageBundle.getInt("date_delivered") > 0;
+                    }catch (JSONException e) {
+                        return false;
+                    }
+                }
+
+                @Override
+                public boolean isSent() {
+                    try {
+                        return messageBundle.getInt("error") == 0 || messageBundle.getInt("is_sent") == 0;
+                    }catch (JSONException e) {
+                        return false;
+                    }
+                }
+
+                @Override
+                public String getImageUrl() {
+                    try {
+                        //Check if we have a resource that can by loaded inline
+                        if (messageBundle.getString("uti").contains("png") || messageBundle.getString("uti").contains("jpeg")) {
+                            //We have a valid loadable image. Let's build the uri
+                            return RemoteMessagesInterface.API_URL + "/attachment?id=" + messageBundle.getString("attachment_id") + "&t=" + APP_CONSTANTS.SERVER_PROTECTION_TOKEN;
+                        }else {
+                            Log.d("GetImageURL","Didn't support the image type: " + messageBundle.getString("uri"));
+                        }
+                    }catch (JSONException e) {}
+                    //If we're here we didn't have a valid image.
+                    return null;
+                }
+            });
 
             //Store our last back GUID so we know who to display labels on
             String finalMessage = messageBundle.getString("guid");
@@ -360,10 +438,12 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
         //Grab our URL if we have it
         String imageUrlIfExsists = message.getImageUrl();
         if (imageUrlIfExsists != null) {
+            Bundle bundle = new Bundle();
+            bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "Tapped image to launch it in browser");
+            mFirebaseAnalytics.logEvent("message_image_tap", bundle);
             //We have an image. They've tapped the image so we want to open it in the browser
             Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(imageUrlIfExsists));
             startActivity(browserIntent);
         }
     }
-
 }
