@@ -211,7 +211,10 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
                                     //We have a message from our conversation...
                                     ArrayList<Message> newMessages = parseMessageBundle(messageBundle);
                                     messageDataStore.addAll(newMessages); //Build our new ones in
-                                    messagesListAdapter.addToStart(newMessages.get(0),true); //reverse true to get latest at bottom
+                                    for (Message m : newMessages) {
+                                        messagesListAdapter.addToStart(m,true); //reverse true to get latest at bottom
+                                    }
+
                                 }
                             }else if (bundle.getString("type").equals("messageSent")) {
                                 //We Sent!
@@ -224,6 +227,9 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
                                             System.out.println("!!! match");
                                             ArrayList<Message> newMessages = parseMessageBundle(messageBundle);
                                             messagesListAdapter.update(m.getId(),newMessages.get(0));
+                                            for (Message updatePayloadMessage : newMessages) {
+                                                messagesListAdapter.update(m.getId(),updatePayloadMessage);
+                                            }
                                             break;
                                         }
                                     }

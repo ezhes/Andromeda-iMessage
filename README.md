@@ -7,6 +7,7 @@ A client for the [MessageProxy Server](https://github.com/shusain93/OSXMessagePr
 2. Delivery status/read status
 2. **GROUP CHATS!** This includes named and unnamed iMessage group chats (i.e. Person 1, person 2, person 3 AND "The Sushi Brigade")
 3. Loading of attachments of any type (images are inline). *todo:* allow sending!
+4. Live messaging (with sockets!)
 
 A named iMessage Group|  Inline photos!
 :-------------------------:|:-------------------------:
@@ -23,4 +24,4 @@ A named iMessage Group|  Inline photos!
 
 #### Crash reporting/analytics
 
-I have setup Firebase crash and session analytics. Nothing personally identifiable is being stolen away (you can check through the code!) but if you are still not comfortable with this you can easily disable tracking globally by editing `AndroidManifest.xml`'s `firebase_analytics_collection_deactivated` key to be `true`. Given that this is extreme beta, I'd recommend that you don't do this since I need crash reporting to make this better but I of course realize that messaging is a very sensitive data.
+I have setup Firebase crash and session analytics. Nothing personally identifiable is being stolen away (you can check through the code!) but if you are still not comfortable with this you can easily disable tracking globally by editing `AndroidManifest.xml`'s `firebase_analytics_collection_deactivated` key to be `true`. Given that this is beta, I'd recommend that you don't do this since I need crash reporting to make this better but I of course realize that messaging is a very sensitive data.
