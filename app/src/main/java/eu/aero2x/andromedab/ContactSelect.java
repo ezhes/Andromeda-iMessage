@@ -45,7 +45,7 @@ public class ContactSelect extends AppCompatActivity {
     ArrayList<JSONObject> conversationDataSource;
     private String incomingNotificationContact = "";
     private FirebaseAnalytics mFirebaseAnalytics;
-
+    public SocketClient socketClient;
 
     @Override
     public void onNewIntent(Intent intent) {
@@ -67,7 +67,6 @@ public class ContactSelect extends AppCompatActivity {
             }else {
                 //Force a conversation reload so we actually go into the right one. We don't load twice because of the null check above.
                 setupConversations();
-                tryToShowConversationWithContactName();
             }
 
         }else {
@@ -89,35 +88,52 @@ public class ContactSelect extends AppCompatActivity {
         //Load our config database
         final SharedPreferences sharedPreferences = getSharedPreferences("CONFIG",MODE_PRIVATE);
         //Check if we are not yet setup
-        if (sharedPreferences.getString("apiEndpoint",null) == null) {
-
+        if (sharedPreferences.getString("apiIPEndpoint",null) == null) {
             AlertDialog.Builder builder = new AlertDialog.Builder(this);
             //you should edit this to fit your needs
             builder.setTitle("Andromeda Configuration");
-            builder.setMessage("To use Andromeda you must have a server running OSXMessageProxy. Enter the FULL API endpoint URL (i.e. http://<domain>:port) without any trailing slashes. In the next text field, enter your API key/password which you have selected. Make sure that all the data you enter is correct because it will not be validated and you will have to delete and re-install the app to reconfigure");
+            builder.setMessage("To use Andromeda you must have a server running OSXMessageProxy. \n\nMake sure that all the data you enter is correct because it will not be validated and you will have to delete and re-install the app to reconfigure");
 
-            final EditText apiText = new EditText(this);
-            apiText.setHint("http://your.domain.com:8735");//optional
+            final EditText apiIPEndPoint = new EditText(this);
+            apiIPEndPoint.setHint("your.domain.com or 182.123.321.164");
+            final EditText apiPort = new EditText(this);
+            apiPort.setHint("API port (default:8735)");
+            final EditText socketPort = new EditText(this);
+            socketPort.setHint("Socket port (default:8736)");
             final EditText apiProtectionKey = new EditText(this);
-            apiProtectionKey.setHint("API key AS IT IS SET IN CONFIG.plist");//optional
+            apiProtectionKey.setHint("API key EXACTLY as in server");
+            //Check if we have an old stored key so we can load that back
+            String oldProtectionKey = sharedPreferences.getString("apiProtectionKey",null);
+            if (oldProtectionKey != null) {
+                apiProtectionKey.setText(oldProtectionKey);
+            }
 
             //in my example i use TYPE_CLASS_NUMBER for input only numbers
-            apiText.setInputType(InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS);
+            apiIPEndPoint.setInputType(InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS);
             apiProtectionKey.setInputType(InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+            apiPort.setInputType(InputType.TYPE_CLASS_NUMBER);
+            socketPort.setInputType(InputType.TYPE_CLASS_NUMBER);
 
             LinearLayout lay = new LinearLayout(this);
             lay.setOrientation(LinearLayout.VERTICAL);
-            lay.addView(apiText);
+            lay.addView(apiIPEndPoint);
+            lay.addView(apiPort);
+            lay.addView(socketPort);
             lay.addView(apiProtectionKey);
             builder.setView(lay);
 
             // Set up the buttons
             builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
                 public void onClick(DialogInterface dialog, int whichButton) {
-                    String givenEndPoint = apiText.getText().toString().trim();
+                    String givenEndPoint = apiIPEndPoint.getText().toString().trim();
                     String givenKey = apiProtectionKey.getText().toString().trim();
+                    int givenAPIPort = Integer.valueOf(apiPort.getText().toString().trim());
+                    int givenSocketPort = Integer.valueOf(socketPort.getText().toString().trim());
+
                     SharedPreferences.Editor editor = getSharedPreferences("CONFIG", MODE_PRIVATE).edit();
-                    editor.putString("apiEndpoint",givenEndPoint);
+                    editor.putString("apiIPEndpoint",givenEndPoint);
+                    editor.putInt("apiPort",givenAPIPort);
+                    editor.putInt("socketPort",givenSocketPort);
                     editor.putString("apiProtectionKey",givenKey);
                     //Write sync because we need this done before we can keep going
                     editor.commit();
@@ -138,11 +154,16 @@ public class ContactSelect extends AppCompatActivity {
         }
     }
 
+
+
     private void prepareView() {
         //Prepare our APP_CONSTANTS
         final SharedPreferences sharedPreferences = getSharedPreferences("CONFIG",MODE_PRIVATE);
-        APP_CONSTANTS.API_URL = sharedPreferences.getString("apiEndpoint","http://no.stored.url.com");
-        APP_CONSTANTS.API_PROTECTION_TOKEN = sharedPreferences.getString("apiProtectionKey","noStoredProtectionToken");
+        APP_CONSTANTS.SERVER_IP = sharedPreferences.getString("apiIPEndpoint","0.0.0.0");
+        APP_CONSTANTS.SERVER_PROTECTION_TOKEN = sharedPreferences.getString("apiProtectionKey","noStoredProtectionToken");
+        APP_CONSTANTS.SERVER_API_PORT = sharedPreferences.getInt("apiPort",0);
+        APP_CONSTANTS.SERVER_SOCKET_PORT = sharedPreferences.getInt("socketPort",0);
+
         //Check for our conversation intents
         onNewIntent(this.getIntent());
         //Setup our conversation UI
@@ -169,16 +190,71 @@ public class ContactSelect extends AppCompatActivity {
                 startActivityForResult(i, UITools.DATA_NEEDS_REFRESH);
             }
         });
-        dialogsListView.setAdapter(dialogsListAdapter);
+        dialogsListView.setAdapter(dialogsListAdapter,false);
 
         RemoteMessagesInterface.messagesEndPointReachable(this, new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
-                //We are online!
-                UITools.showSnackBar(findViewById(android.R.id.content), "Successfully connected!", Snackbar.LENGTH_LONG);
+                try {
+                    JSONObject versionObject = new JSONObject(response);
+                    //Log the server version
+                    Bundle bundle = new Bundle();
+                    bundle.putString(FirebaseAnalytics.Param.VALUE, "" + versionObject.getDouble("version"));
+                    mFirebaseAnalytics.logEvent("server_version", bundle);
 
-                //Since we can see the server, setup our contacts
-                setupConversations();
+                    Version serverVersion = new Version("" + versionObject.getDouble("version"));
+
+
+                    //Check if our server version is below the app's required
+                    if (serverVersion.compareTo(new Version("" + BuildConfig.MIN_SERVER_VERSION)) < 0) {
+                        AlertDialog alertDialog = new AlertDialog.Builder(ContactSelect.this).create();
+                        alertDialog.setTitle("Server version too old");
+                        alertDialog.setMessage("Your server is running version " + serverVersion.get() + " but the BUILDCONFIG for the application demands that you be running at least " + BuildConfig.MIN_SERVER_VERSION + "\n\nYou can continue to use the application however behavior is entirely undocumented.");
+                        alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, "OK",
+                                new DialogInterface.OnClickListener() {
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        dialog.dismiss();
+                                    }
+                                });
+                        alertDialog.show();
+                    }
+                    //We are online!
+                    UITools.showSnackBar(findViewById(android.R.id.content), "Successfully connected!", Snackbar.LENGTH_LONG);
+                    //Since we can see the server, setup our contacts
+                    setupConversations();
+                }catch (JSONException e) {
+                    AlertDialog alertDialog = new AlertDialog.Builder(ContactSelect.this).create();
+                    alertDialog.setTitle("Server version too old");
+                    alertDialog.setMessage("The server should have responded with a version number JSON at /isUp. You can continue to use the app but it is highly recommended that you update the server ASAP;\nServer said:" + response +"\n" + e.toString());
+                    alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, "OK",
+                            new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int which) {
+                                    dialog.dismiss();
+                                }
+                            });
+                    alertDialog.show();
+                    //Log the server version
+                    Bundle bundle = new Bundle();
+                    bundle.putString(FirebaseAnalytics.Param.VALUE, "<1.1.1");
+                    mFirebaseAnalytics.logEvent("server_version", bundle);
+                    //Since we can see the server, setup our contacts
+                    setupConversations();
+                }catch (IllegalArgumentException e) {
+                    AlertDialog alertDialog = new AlertDialog.Builder(ContactSelect.this).create();
+                    alertDialog.setTitle("Server version invalid");
+                    alertDialog.setMessage("The server should have responded with a version number JSON at /isUp but we got:" + response +"\n" + e.toString());
+                    alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, "OK",
+                            new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int which) {
+                                    dialog.dismiss();
+                                }
+                            });
+                    alertDialog.show();
+                    //Log the server version
+                    Bundle bundle = new Bundle();
+                    bundle.putString(FirebaseAnalytics.Param.VALUE, response);
+                    mFirebaseAnalytics.logEvent("server_version_cant_read", bundle);
+                }
 
             }
         }, new Response.ErrorListener() {
@@ -186,8 +262,18 @@ public class ContactSelect extends AppCompatActivity {
             public void onErrorResponse(VolleyError error) {
                 //We couldn't connect, die.
                 String err = (error.toString() == null) ? "Generic network error" : error.toString();
-                UITools.showDismissableSnackBar(findViewById(android.R.id.content), "Unable to connect!\n" + err);
                 error.printStackTrace();
+
+                AlertDialog alertDialog = new AlertDialog.Builder(ContactSelect.this).create();
+                alertDialog.setTitle("Couldn't connect to endpoint");
+                alertDialog.setMessage("The server didn't respond."+"\n" + err.toString());
+                alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, "OK",
+                        new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                dialog.dismiss();
+                            }
+                        });
+                alertDialog.show();
             }
         });
     }
@@ -206,7 +292,7 @@ public class ContactSelect extends AppCompatActivity {
         Bundle bundle = new Bundle();
         bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "Trying to show a conversation based on contact name");
         mFirebaseAnalytics.logEvent("show_conversation", bundle);
-        boolean foundConversation = false; //Are we successfull?
+        boolean foundConversation = false; //Are we successful?
         for (int i = 0; i != conversationList.size(); i++) { //Integrate all conversationJSONDatabase starting from top. We prioritize latest per WARNINGS above
                 //Check if our search term is in the conversation name
             try {
@@ -220,7 +306,7 @@ public class ContactSelect extends AppCompatActivity {
                     //We found it, let's show it
                     Intent launchIntent = new Intent(getApplicationContext(), Conversation.class);
                     launchIntent.putExtra("conversationJSONString", conversationDataSource.get(i).toString()); //send our conversation's JSON along
-                    startActivity(launchIntent);
+                    startActivityForResult(launchIntent, UITools.DATA_NEEDS_REFRESH);
                     //And kill the loop
                     break;
                 }
@@ -241,66 +327,108 @@ public class ContactSelect extends AppCompatActivity {
         RemoteMessagesInterface.getConversations(this,new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
-                try {
-                    final JSONArray conversationJSONDatabase = new JSONArray(response);
+               handleConversationBundle(response);
+            }
+        },  new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                //We couldn't connect, die.
+                String err = (error.toString()==null)?"Generic network error":error.toString();
+                UITools.showDismissableSnackBar(findViewById(android.R.id.content),"Unable to load conversationJSONDatabase!\n" + err);
+            }
+        });
+    }
 
-                    //Create our storage
-                    conversationList = new ArrayList();
-                    //Create our JSON object datasource
-                    conversationDataSource = new ArrayList<>();
-                    int conversationCount = conversationJSONDatabase.length();
+    /**
+     * Take the string response for conversations and prepare it for the UI
+     * @param response
+     */
+    protected void handleConversationBundle(String response) {
+        try {
+            final JSONArray conversationJSONDatabase = new JSONArray(response);
 
-                    for (int i = 0; i != conversationCount; i++) {
-                        JSONObject conversation = conversationJSONDatabase.getJSONObject(i);
-                        conversationDataSource.add(i,conversation); //store our conversation
+            //Create our storage
+            conversationList = new ArrayList();
+            //Create our JSON object datasource
+            conversationDataSource = new ArrayList<>();
+            int conversationCount = conversationJSONDatabase.length();
+
+            for (int i = 0; i != conversationCount; i++) {
+                JSONObject conversation = conversationJSONDatabase.getJSONObject(i);
+                conversationDataSource.add(i,conversation); //store our conversation
+            }
+
+
+            for (int i = 0; i != conversationCount; i++) {
+                //Grab our conversation ahead of time
+                final JSONObject conversation = conversationDataSource.get(i);
+
+                final int dataSourcePosition = i;
+
+                conversationList.add(new IDialog() {
+                    @Override
+                    public String getId() {
+                        return "" + dataSourcePosition;
                     }
 
-                    Collections.sort(conversationDataSource, new Comparator<JSONObject>() {
-                        @Override
-                        public int compare(JSONObject t0, JSONObject t1) {
-                            try {
-                                return Integer.compare(t1.getJSONObject("lastMessage").getInt("date"),t0.getJSONObject("lastMessage").getInt("date"));
-                            }catch (JSONException e) {
-                                e.printStackTrace();
-                                FirebaseCrash.log("Compare failed");
-                                FirebaseCrash.report(e);
-                                return -1;
-                            }
+                    @Override
+                    public String getDialogPhoto() {
+                        return null;
+                    }
+
+                    @Override
+                    public String getDialogName() {
+                        try {
+                            return conversation.getString("display_name");
+                        }catch (JSONException e) {
+                            FirebaseCrash.log("Nameless chat error");
+                            FirebaseCrash.report(e);
+                            return "Nameless chat error";
                         }
-                    });
+                    }
 
-                    for (int i = 0; i != conversationCount; i++) {
-                        //Grab our conversation ahead of time
-                        final JSONObject conversation = conversationDataSource.get(i);
-
-                        final int dataSourcePosition = i;
-
-                        conversationList.add(new IDialog() {
+                    @Override
+                    public List<IUser> getUsers() {
+                        ArrayList<IUser> users = new ArrayList<>();
+                        users.add(new IUser() {
                             @Override
                             public String getId() {
-                                return "" + dataSourcePosition;
+                                return "number";
                             }
 
                             @Override
-                            public String getDialogPhoto() {
+                            public String getName() {
+                                return "FIRST PERSON";
+                            }
+
+                            @Override
+                            public String getAvatar() {
+                                return null;
+                            }
+                        });
+                        return users;
+                    }
+
+                    @Override
+                    public IMessage getLastMessage() {
+                        return new IMessage() {
+                            @Override
+                            public String getId() {
                                 return null;
                             }
 
                             @Override
-                            public String getDialogName() {
+                            public String getText() {
                                 try {
-                                    return conversation.getString("display_name");
-                                }catch (JSONException e) {
-                                    FirebaseCrash.log("Nameless chat error");
-                                    FirebaseCrash.report(e);
-                                    return "Nameless chat error";
+                                    return conversation.getJSONObject("lastMessage").getString("text");
+                                } catch (JSONException e) {
+                                    return "";
                                 }
                             }
 
                             @Override
-                            public List<IUser> getUsers() {
-                                ArrayList<IUser> users = new ArrayList<>();
-                                users.add(new IUser() {
+                            public IUser getUser() {
+                                return new IUser() {
                                     @Override
                                     public String getId() {
                                         return "number";
@@ -315,114 +443,116 @@ public class ContactSelect extends AppCompatActivity {
                                     public String getAvatar() {
                                         return null;
                                     }
-                                });
-                                return users;
-                            }
-
-                            @Override
-                            public IMessage getLastMessage() {
-                                return new IMessage() {
-                                    @Override
-                                    public String getId() {
-                                        return null;
-                                    }
-
-                                    @Override
-                                    public String getText() {
-                                        try {
-                                            return conversation.getJSONObject("lastMessage").getString("text");
-                                        } catch (JSONException e) {
-                                            return "";
-                                        }
-                                    }
-
-                                    @Override
-                                    public IUser getUser() {
-                                        return new IUser() {
-                                            @Override
-                                            public String getId() {
-                                                return "number";
-                                            }
-
-                                            @Override
-                                            public String getName() {
-                                                return "FIRST PERSON";
-                                            }
-
-                                            @Override
-                                            public String getAvatar() {
-                                                return null;
-                                            }
-                                        };
-                                    }
-
-                                    @Override
-                                    public Date getCreatedAt() {
-                                        try {
-                                            //Convert from cocoa to epoch hence 978307200 and then to ms
-                                            return new Date((conversation.getJSONObject("lastMessage").getInt("date") + 978307200L)*1000);
-                                        } catch (JSONException e) {
-                                            return new Date();
-                                        }
-
-                                    }
                                 };
                             }
 
                             @Override
-                            public void setLastMessage(IMessage message) {
+                            public Date getCreatedAt() {
+                                try {
+                                    //Convert from cocoa to epoch hence 978307200 and then to ms
+                                    return new Date((conversation.getJSONObject("lastMessage").getInt("date") + 978307200L)*1000);
+                                } catch (JSONException e) {
+                                    return new Date();
+                                }
 
                             }
-
-                            @Override
-                            public int getUnreadCount() {
-                                return 0;
-                            }
-                        });
+                        };
                     }
 
-                    /*
-                    Collections.sort(conversationList, new Comparator<IDialog>() {
-                        @Override
-                        public int compare(IDialog t0, IDialog t1) {
-                            return t1.getLastMessage().getCreatedAt().compareTo(t0.getLastMessage().getCreatedAt());
-                        }
-                    });
-*/
+                    @Override
+                    public void setLastMessage(IMessage message) {
 
-                    dialogsListAdapter.setItems(conversationList);
-                    Log.d("Contacts","Notification: " + incomingNotificationContact);
-                    //Now that we're done, check if we waited to launch a conversation
-                    if (incomingNotificationContact.equals("") == false) {
-                        Log.d("Contacts","We have a search from the dead!");
-                        //We have a search!
-                        tryToShowConversationWithContactName();
                     }
-                } catch (JSONException e) {
-                    FirebaseCrash.log("Couldn't parse conversation json");
-                    FirebaseCrash.report(e);
-                    UITools.showDismissableSnackBar(findViewById(android.R.id.content),"JSON error:\n" + e.toString());
+
+                    @Override
+                    public int getUnreadCount() {
+                        return 0;
+                    }
+                });
+            }
+
+            Collections.sort(conversationList, new Comparator<IDialog>() {
+                @Override
+                public int compare(IDialog t0, IDialog t1) {
+                        return t1.getLastMessage().getCreatedAt().compareTo(t0.getLastMessage().getCreatedAt());
+
+
                 }
+            });
+            dialogsListAdapter.setItems(conversationList);
+            Log.d("Contacts","Notification: " + incomingNotificationContact);
+            //Now that we're done, check if we waited to launch a conversation
+            if (incomingNotificationContact.equals("") == false) {
+                Log.d("Contacts","We have a search from the dead!");
+                //We have a search!
+                tryToShowConversationWithContactName();
             }
-        },  new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                //We couldn't connect, die.
-                String err = (error.toString()==null)?"Generic network error":error.toString();
-                UITools.showDismissableSnackBar(findViewById(android.R.id.content),"Unable to load conversationJSONDatabase!\n" + err);
-            }
-        });
 
-
+        } catch (JSONException e) {
+            FirebaseCrash.log("Couldn't parse conversation json");
+            FirebaseCrash.report(e);
+            UITools.showDismissableSnackBar(findViewById(android.R.id.content),"JSON error:\n" + e.toString());
+        }
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == UITools.DATA_NEEDS_REFRESH) {
-            setupConversations();
-            Log.d("Conversation","GOT UPDATE NEEDED INTENT");
+            Log.d("Conversation","Came back from conversations, checking for update payload");
+            if (data != null && data.hasExtra("latestSocketConversationData")) {
+                Log.d("Conversation","We have a data package to update for");
+                String newData = data.getExtras().getString("latestSocketConversationData");
+                handleConversationBundle(newData);
+            }else {
+                Log.d("Conversation","No latestSocketConversationData to use");
+            }
         }
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();  // Always call the superclass method first
+        Log.d("onPauseContacts","SUSPENDING SOCKET");
+        if (socketClient != null && socketClient.socketThread != null) {
+            socketClient.socketThread.cancel(false);
+        }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (socketClient != null && socketClient.socketThread.isCancelled() == false) {
+            socketClient.socketThread.cancel(false);
+        }
+
+        //We need this check because onResume ignores config. Can't connect to an empty int. 0 is default int value.
+        if (APP_CONSTANTS.SERVER_SOCKET_PORT != 0) {
+            socketClient = new SocketClient(APP_CONSTANTS.SERVER_IP, APP_CONSTANTS.SERVER_SOCKET_PORT, new SocketResponseHandler() {
+
+                @Override
+                public void handleResponse(final String response) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                JSONObject bundle = new JSONObject(response);
+                                if (bundle.getString("type").equals("conversations")) {
+                                    //New conversation bundle!
+                                    handleConversationBundle(bundle.getJSONArray("content").toString());
+                                } else {
+                                    //We don't want to handle this, notify children
+                                }
+                            } catch (JSONException e) {
+                                Log.d("handleSocket", "failed to parse bundle " + response);
+                                e.printStackTrace();
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
     }
 
 }

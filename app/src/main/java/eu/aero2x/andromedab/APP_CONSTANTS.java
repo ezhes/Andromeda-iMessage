@@ -5,6 +5,8 @@ package eu.aero2x.andromedab;
  */
 
 public class APP_CONSTANTS {
-    public static String API_URL = ""; //API URL WITHOUT THE TRAILING SLASH. Example: http://yourdomain:port
-    public static String API_PROTECTION_TOKEN = ""; //The random token/password you configured in the CONFIG.plist in the MessageProxy. This authenticates this build of the app with the server. Don't share this token!
+    public static String SERVER_IP = "";
+    public static int SERVER_API_PORT;
+    public static int SERVER_SOCKET_PORT;
+    public static String SERVER_PROTECTION_TOKEN = ""; //The random token/password you configured in the CONFIG.plist in the MessageProxy. This authenticates this build of the app with the server. Don't share this token!
 }

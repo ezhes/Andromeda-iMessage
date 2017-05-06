@@ -34,28 +34,33 @@ public class CustomOutgoingMessage extends MessagesListAdapter.OutcomingMessageV
 
         if (message.getId().equals(Conversation.lastMessageGUID)) { //Are we the last back?
             //Horray!
-            if (message.isDelivered()) {
-                if (message.isRead()) {
-                    SimpleDateFormat sdf = new SimpleDateFormat("HH:mm");
-                    try {
-                        Date parsed = sdf.parse(message.getTimeRead());
-                        //We are read
-                        messageStatus.setText("Read at " + new SimpleDateFormat("h:mm a").format(parsed));
-                    } catch (ParseException e) {
-                        e.printStackTrace();
-                    }
+            if (message.isSent()) {
+                if (message.isDelivered()) {
+                    if (message.isRead()) {
+                        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm");
+                        try {
+                            Date parsed = sdf.parse(message.getTimeRead());
+                            //We are read
+                            messageStatus.setText("Read at " + new SimpleDateFormat("h:mm a").format(parsed));
+                        } catch (ParseException e) {
+                            e.printStackTrace();
+                        }
 
-                }else {
-                    //We are delivered but not read
-                    messageStatus.setText("Delivered");
+                    } else {
+                        //We are delivered but not read
+                        messageStatus.setText("Delivered");
+                    }
+                } else {
+                    //Are we last back BUT not yet sent?
+                    //Not delivered/no label
+                    messageStatus.setText("Sent");
                 }
             }else {
-                //Are we last back BUT not yet sent?
-                //Not delivered/no label
-                messageStatus.setText("");
+                //Message has not yet been sent
+                messageStatus.setText("Sending...");
             }
         }else {
-            //Not delivered/no label
+            //We're not last back so no label
             messageStatus.setText("");
         }
 

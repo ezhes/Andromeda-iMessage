@@ -24,13 +24,13 @@ import java.util.Map;
  */
 
 public class RemoteMessagesInterface {
-    public final static String API_URL = APP_CONSTANTS.API_URL; //API URL WITHOUT THE TRAILING SLASH. Example: http://yourdomain:port
-    public final static String API_PROTECTION_TOKEN = APP_CONSTANTS.API_PROTECTION_TOKEN; //The API protection key
+    public final static String API_URL = "http://"+APP_CONSTANTS.SERVER_IP + ":" + APP_CONSTANTS.SERVER_API_PORT; //API URL WITHOUT THE TRAILING SLASH. Example: http://yourdomain:port
+    public final static String API_PROTECTION_TOKEN = APP_CONSTANTS.SERVER_PROTECTION_TOKEN; //The API protection key
     public static void messagesEndPointReachable(Context context, Response.Listener<String> onResponse,Response.ErrorListener onError) {
         // Instantiate the RequestQueue.
         RequestQueue queue = Volley.newRequestQueue(context);
         //                  Send an invalid request which should return (Love, Jess)
-        StringRequest stringRequester = new StringRequest(Request.Method.GET,API_URL + "/isUp",onResponse,onError);
+        StringRequest stringRequester = new StringRequest(Request.Method.GET,API_URL + "/isUp?t="+API_PROTECTION_TOKEN,onResponse,onError);
 
         // Add the request to the RequestQueue.
         queue.add(stringRequester);
@@ -56,7 +56,7 @@ public class RemoteMessagesInterface {
                     Map<String, String>  params = new HashMap<String, String>();
                     //afterID is how we send what we want in our request
                     params.put("conversationID", "" + conversationID);
-                    params.put("t",APP_CONSTANTS.API_PROTECTION_TOKEN);
+                    params.put("t",APP_CONSTANTS.SERVER_PROTECTION_TOKEN);
 
                     return params;
                 }
@@ -74,7 +74,7 @@ public class RemoteMessagesInterface {
                 Map<String, String> params = new HashMap<String, String>();
                 params.put("participants",recipients);
                 params.put("message", message);
-                params.put("t",APP_CONSTANTS.API_PROTECTION_TOKEN);
+                params.put("t",APP_CONSTANTS.SERVER_PROTECTION_TOKEN);
                 return params;
             }
         };
