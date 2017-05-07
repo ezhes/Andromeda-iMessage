@@ -4,6 +4,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Intent;
 import android.net.Uri;
+import android.support.customtabs.CustomTabsIntent;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -448,8 +449,9 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
             bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "Tapped image to launch it in browser");
             mFirebaseAnalytics.logEvent("message_image_tap", bundle);
             //We have an image. They've tapped the image so we want to open it in the browser
-            Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(imageUrlIfExsists));
-            startActivity(browserIntent);
+            CustomTabsIntent.Builder builder = new CustomTabsIntent.Builder();
+            CustomTabsIntent customTabsIntent = builder.build();
+            customTabsIntent.launchUrl(Conversation.this, Uri.parse(imageUrlIfExsists));
         }
     }
 }
