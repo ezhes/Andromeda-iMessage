@@ -5,11 +5,15 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
+import android.support.customtabs.CustomTabsIntent;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.InputType;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -92,7 +96,7 @@ public class ContactSelect extends AppCompatActivity {
             AlertDialog.Builder builder = new AlertDialog.Builder(this);
             //you should edit this to fit your needs
             builder.setTitle("Andromeda Configuration");
-            builder.setMessage("To use Andromeda you must have a server running OSXMessageProxy. \n\nMake sure that all the data you enter is correct because it will not be validated and you will have to delete and re-install the app to reconfigure");
+            builder.setMessage("To use Andromeda you must have a server running OSXMessageProxy. \n\nIf you make a mistake, open the menu up top and choose 'Reset configuration...'");
 
             final EditText apiIPEndPoint = new EditText(this);
             apiIPEndPoint.setHint("your.domain.com or 182.123.321.164");
@@ -144,7 +148,7 @@ public class ContactSelect extends AppCompatActivity {
 
             builder.setNegativeButton("Exit", new DialogInterface.OnClickListener() {
                 public void onClick(DialogInterface dialog, int whichButton) {
-                    finish();
+                    finishAffinity();
                 }
             });
             builder.show();
@@ -154,7 +158,61 @@ public class ContactSelect extends AppCompatActivity {
         }
     }
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.menu_conversations, menu);
+        return true;
+    }
 
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle item selection
+        switch (item.getItemId()) {
+            case R.id.resetConfig:
+                AlertDialog alertDialog = new AlertDialog.Builder(ContactSelect.this).create();
+                alertDialog.setTitle("Are you sure you want to reset the application?");
+                alertDialog.setMessage("This will remove the entire application configuration and close the application.");
+                alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, "Reset",
+                        new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                Bundle bundle = new Bundle();
+                                bundle.putString(FirebaseAnalytics.Param.VALUE, "Erased settings");
+                                mFirebaseAnalytics.logEvent("app_menu_reset_settings", bundle);
+                                SharedPreferences.Editor editor = getSharedPreferences("CONFIG", MODE_PRIVATE).edit();
+                                //Nuke all preferences
+                                editor.putString("apiIPEndpoint",null);
+                                editor.putInt("apiPort",0);
+                                editor.putInt("socketPort",0);
+                                //Force safe instantly.
+                                editor.commit();
+                                //Close the activity
+                                finishAffinity();
+                                //Kill ourselves so that it's a completely clean state.
+                                System.exit(0);
+                            }
+                        });
+                alertDialog.setButton(AlertDialog.BUTTON_NEGATIVE, "Cancel",
+                        new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                Bundle bundle = new Bundle();
+                                bundle.putString(FirebaseAnalytics.Param.VALUE, "Erase settings canceled");
+                                mFirebaseAnalytics.logEvent("app_menu", bundle);
+                                dialog.dismiss();
+                            }
+                        });
+                alertDialog.show();
+                return true;
+            case R.id.openProjectPage:
+                CustomTabsIntent.Builder builder = new CustomTabsIntent.Builder();
+                CustomTabsIntent customTabsIntent = builder.build();
+                customTabsIntent.launchUrl(ContactSelect.this, Uri.parse("https://github.com/shusain93/Andromeda-iMessage"));
+
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
 
     private void prepareView() {
         //Prepare our APP_CONSTANTS

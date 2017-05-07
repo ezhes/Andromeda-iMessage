@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/openProjectPage"
+        android:title="Open project page"
+        android:showAsAction="ifRoom"/>
+    <item android:id="@+id/resetConfig"
+        android:title="Reset configuration..."
+        android:showAsAction="ifRoom"/>
+</menu>
