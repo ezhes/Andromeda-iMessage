@@ -264,7 +264,7 @@ public class ContactSelect extends AppCompatActivity {
 
 
                     //Check if our server version is below the app's required
-                    if (serverVersion.compareTo(new Version("" + BuildConfig.MIN_SERVER_VERSION)) < 0) {
+                    if (serverVersion.compareTo(new Version(BuildConfig.MIN_SERVER_VERSION)) < 0) {
                         AlertDialog alertDialog = new AlertDialog.Builder(ContactSelect.this).create();
                         alertDialog.setTitle("Server version too old");
                         alertDialog.setMessage("Your server is running version " + serverVersion.get() + " but the BUILDCONFIG for the application demands that you be running at least " + BuildConfig.MIN_SERVER_VERSION + "\n\nYou can continue to use the application however behavior is entirely undocumented.");
