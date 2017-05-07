@@ -110,7 +110,7 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
                         "    \"date\" : "+ ((System.currentTimeMillis())/1000-978307200L) + ",\n" + //Convert epoch to cocoa
                         "    \"text\" : \"" + input.toString().replace("\\","\\\\").replace("\"","\\\"").replace("\n","\\n") +"\",\n" + //manually escape for JSON. It's bad but unexploitable
                         "    \"is_from_me\" : 1,\n" +
-                        "    \"error\" : 0,\n" +
+                        "    \"error\" : -23813,\n" +
                         "    \"guid\" : \"notSent"+ (int)(Math.random()*2000) + "\",\n" + //random bit so we can be sure we replace the right GUID
                         "    \"date_delivered\" : 0,\n" +
                         "    \"is_sent\" : 0,\n" +
@@ -406,7 +406,7 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
                 @Override
                 public boolean isSent() {
                     try {
-                        return messageBundle.getInt("error") == 0 || messageBundle.getInt("is_sent") == 0;
+                        return messageBundle.getInt("error") == 0 || messageBundle.getInt("is_sent") == 1;
                     }catch (JSONException e) {
                         return false;
                     }
