@@ -257,10 +257,10 @@ public class ContactSelect extends AppCompatActivity {
                     JSONObject versionObject = new JSONObject(response);
                     //Log the server version
                     Bundle bundle = new Bundle();
-                    bundle.putString(FirebaseAnalytics.Param.VALUE, "" + versionObject.getDouble("version"));
+                    bundle.putString(FirebaseAnalytics.Param.VALUE, versionObject.getString("version"));
                     mFirebaseAnalytics.logEvent("server_version", bundle);
 
-                    Version serverVersion = new Version("" + versionObject.getDouble("version"));
+                    Version serverVersion = new Version(versionObject.getString("version"));
 
 
                     //Check if our server version is below the app's required
@@ -416,6 +416,20 @@ public class ContactSelect extends AppCompatActivity {
                 conversationDataSource.add(i,conversation); //store our conversation
             }
 
+            //Note to future self:: don't remove this sort here. If you do, you break the contact search
+            Collections.sort(conversationDataSource, new Comparator<JSONObject>() {
+                @Override
+                public int compare(JSONObject t0, JSONObject t1) {
+                    try {
+                        return Integer.compare(t1.getJSONObject("lastMessage").getInt("date"),t0.getJSONObject("lastMessage").getInt("date"));
+                    }catch (JSONException e) {
+                        e.printStackTrace();
+                        FirebaseCrash.log("Compare failed");
+                        FirebaseCrash.report(e);
+                        return -1;
+                    }
+                }
+            });
 
             for (int i = 0; i != conversationCount; i++) {
                 //Grab our conversation ahead of time
@@ -529,14 +543,14 @@ public class ContactSelect extends AppCompatActivity {
                 });
             }
 
-            Collections.sort(conversationList, new Comparator<IDialog>() {
+           /* Collections.sort(conversationList, new Comparator<IDialog>() {
                 @Override
                 public int compare(IDialog t0, IDialog t1) {
                         return t1.getLastMessage().getCreatedAt().compareTo(t0.getLastMessage().getCreatedAt());
 
 
                 }
-            });
+            });*/
             dialogsListAdapter.setItems(conversationList);
             Log.d("Contacts","Notification: " + incomingNotificationContact);
             //Now that we're done, check if we waited to launch a conversation
