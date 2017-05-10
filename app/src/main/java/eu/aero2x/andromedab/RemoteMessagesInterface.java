@@ -66,7 +66,7 @@ public class RemoteMessagesInterface {
 
     }
 
-    public static void sendMessage (final String recipients, final String message, Context context, Response.Listener<String> onResponse, Response.ErrorListener onError) {
+    public static void sendMessage (final String recipients, final String message, final boolean hasCustomName, Context context, Response.Listener<String> onResponse, Response.ErrorListener onError) {
         RequestQueue queue = Volley.newRequestQueue(context);
         StringRequest stringRequester = new StringRequest(Request.Method.POST, API_URL + "/send", onResponse, onError) {
 
@@ -74,6 +74,7 @@ public class RemoteMessagesInterface {
                 Map<String, String> params = new HashMap<String, String>();
                 params.put("participants",recipients);
                 params.put("message", message);
+                params.put("hasCustomName",hasCustomName ? "true" : "false");
                 params.put("t",APP_CONSTANTS.SERVER_PROTECTION_TOKEN);
                 return params;
             }
