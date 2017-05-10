@@ -136,7 +136,7 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
                         System.out.println("NO HAVE A CUSTOM NAME " + displayName);
                     }
 
-                    RemoteMessagesInterface.sendMessage(recipients,input.toString(),Conversation.this,new Response.Listener<String>() {
+                    RemoteMessagesInterface.sendMessage(recipients,input.toString(),parentConversation.getBoolean("has_manual_display_name"),Conversation.this,new Response.Listener<String>() {
                         @Override
                         public void onResponse(String response) {
                             //The message sent!
