@@ -7,18 +7,18 @@ android {
         applicationId "eu.aero2x.andromedab"
         minSdkVersion 19
         targetSdkVersion 25
-        versionCode 4
-        versionName "1.2.0.2"
+        versionCode 5
+        versionName "1.2.2"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            buildConfigField "String", "MIN_SERVER_VERSION", '"1.2.0"'
+            buildConfigField "String", "MIN_SERVER_VERSION", '"1.2.1"'
         }
         debug{
-            buildConfigField "String", "MIN_SERVER_VERSION", '"1.2.0"'
+            buildConfigField "String", "MIN_SERVER_VERSION", '"1.2.1"'
         }
 
     }

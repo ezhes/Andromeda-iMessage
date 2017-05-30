@@ -37,12 +37,13 @@ public class CustomOutgoingMessage extends MessagesListAdapter.OutcomingMessageV
             if (message.isSent()) {
                 if (message.isDelivered()) {
                     if (message.isRead()) {
-                        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm");
                         try {
-                            Date parsed = sdf.parse(message.getTimeRead());
+                            //This date bundle is in cocoa time so we need to convert it
+                            long epochTimeRead = (Integer.valueOf(message.getTimeRead())+ 978307200L)*1000;
+
                             //We are read
-                            messageStatus.setText("Read at " + new SimpleDateFormat("h:mm a").format(parsed));
-                        } catch (ParseException e) {
+                            messageStatus.setText("Read at " + new SimpleDateFormat("h:mm a").format(new Date(epochTimeRead)));
+                        } catch (NumberFormatException e) {
                             e.printStackTrace();
                         }
 

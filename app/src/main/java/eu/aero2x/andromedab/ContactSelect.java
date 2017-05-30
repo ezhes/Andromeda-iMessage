@@ -82,6 +82,7 @@ public class ContactSelect extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_contact_select);
+
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         //Setup our update from github
         new AppUpdater(this)
@@ -131,8 +132,20 @@ public class ContactSelect extends AppCompatActivity {
                 public void onClick(DialogInterface dialog, int whichButton) {
                     String givenEndPoint = apiIPEndPoint.getText().toString().trim();
                     String givenKey = apiProtectionKey.getText().toString().trim();
-                    int givenAPIPort = Integer.valueOf(apiPort.getText().toString().trim());
-                    int givenSocketPort = Integer.valueOf(socketPort.getText().toString().trim());
+
+                    String apiPortText = apiPort.getText().toString().trim();
+                    if (apiPortText.equals("")) {
+                        //No API port given, default
+                        apiPortText = "8735";
+                    }
+                    String socketPortText = socketPort.getText().toString().trim();
+                    if (socketPortText.equals("")) {
+                        //No socket port given, default
+                        socketPortText = "8736";
+                    }
+
+                    int givenAPIPort = Integer.valueOf(apiPortText);
+                    int givenSocketPort = Integer.valueOf(socketPortText);
 
                     SharedPreferences.Editor editor = getSharedPreferences("CONFIG", MODE_PRIVATE).edit();
                     editor.putString("apiIPEndpoint",givenEndPoint);
@@ -258,39 +271,21 @@ public class ContactSelect extends AppCompatActivity {
                     //Log the server version
                     Bundle bundle = new Bundle();
                     bundle.putString(FirebaseAnalytics.Param.VALUE, versionObject.getString("version"));
-                    mFirebaseAnalytics.logEvent("server_version", bundle);
+                    mFirebaseAnalytics.logEvent("server_version_" + versionObject.getString("version"), bundle);
 
                     Version serverVersion = new Version(versionObject.getString("version"));
 
 
                     //Check if our server version is below the app's required
                     if (serverVersion.compareTo(new Version(BuildConfig.MIN_SERVER_VERSION)) < 0) {
-                        AlertDialog alertDialog = new AlertDialog.Builder(ContactSelect.this).create();
-                        alertDialog.setTitle("Server version too old");
-                        alertDialog.setMessage("Your server is running version " + serverVersion.get() + " but the BUILDCONFIG for the application demands that you be running at least " + BuildConfig.MIN_SERVER_VERSION + "\n\nYou can continue to use the application however behavior is entirely undocumented.");
-                        alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, "OK",
-                                new DialogInterface.OnClickListener() {
-                                    public void onClick(DialogInterface dialog, int which) {
-                                        dialog.dismiss();
-                                    }
-                                });
-                        alertDialog.show();
+                        UITools.showAlertDialogSafe(ContactSelect.this,R.id.activity_contact_select,"Server version too old","Your server is running version " + serverVersion.get() + " but the BUILDCONFIG for the application demands that you be running at least " + BuildConfig.MIN_SERVER_VERSION + "\n\nYou can continue to use the application however behavior is entirely undocumented.");
                     }
                     //We are online!
                     UITools.showSnackBar(findViewById(android.R.id.content), "Successfully connected!", Snackbar.LENGTH_LONG);
                     //Since we can see the server, setup our contacts
                     setupConversations();
                 }catch (JSONException e) {
-                    AlertDialog alertDialog = new AlertDialog.Builder(ContactSelect.this).create();
-                    alertDialog.setTitle("Server version too old");
-                    alertDialog.setMessage("The server should have responded with a version number JSON at /isUp. You can continue to use the app but it is highly recommended that you update the server ASAP;\nServer said:" + response +"\n" + e.toString());
-                    alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, "OK",
-                            new DialogInterface.OnClickListener() {
-                                public void onClick(DialogInterface dialog, int which) {
-                                    dialog.dismiss();
-                                }
-                            });
-                    alertDialog.show();
+                    UITools.showAlertDialogSafe(ContactSelect.this,R.id.activity_contact_select,"Server version too old","The server should have responded with a version number JSON at /isUp. You can continue to use the app but it is highly recommended that you update the server ASAP;\nServer said:" + response +"\n" + e.toString());
                     //Log the server version
                     Bundle bundle = new Bundle();
                     bundle.putString(FirebaseAnalytics.Param.VALUE, "<1.1.1");
@@ -298,16 +293,7 @@ public class ContactSelect extends AppCompatActivity {
                     //Since we can see the server, setup our contacts
                     setupConversations();
                 }catch (IllegalArgumentException e) {
-                    AlertDialog alertDialog = new AlertDialog.Builder(ContactSelect.this).create();
-                    alertDialog.setTitle("Server version invalid");
-                    alertDialog.setMessage("The server should have responded with a version number JSON at /isUp but we got:" + response +"\n" + e.toString());
-                    alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, "OK",
-                            new DialogInterface.OnClickListener() {
-                                public void onClick(DialogInterface dialog, int which) {
-                                    dialog.dismiss();
-                                }
-                            });
-                    alertDialog.show();
+                    UITools.showAlertDialogSafe(ContactSelect.this,R.id.activity_contact_select,"Server version invalid","The server should have responded with a version number JSON at /isUp but we got:" + response +"\n" + e.toString());
                     //Log the server version
                     Bundle bundle = new Bundle();
                     bundle.putString(FirebaseAnalytics.Param.VALUE, response);
@@ -322,16 +308,8 @@ public class ContactSelect extends AppCompatActivity {
                 String err = (error.toString() == null) ? "Generic network error" : error.toString();
                 error.printStackTrace();
 
-                AlertDialog alertDialog = new AlertDialog.Builder(ContactSelect.this).create();
-                alertDialog.setTitle("Couldn't connect to endpoint");
-                alertDialog.setMessage("The server didn't respond."+"\n" + err.toString());
-                alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, "OK",
-                        new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int which) {
-                                dialog.dismiss();
-                            }
-                        });
-                alertDialog.show();
+                UITools.showAlertDialogSafe(ContactSelect.this,R.id.activity_contact_select,"Couldn't connect to endpoint","The server didn't respond."+"\n" + err.toString());
+
             }
         });
     }
@@ -454,7 +432,6 @@ public class ContactSelect extends AppCompatActivity {
                             return conversation.getString("display_name");
                         }catch (JSONException e) {
                             FirebaseCrash.log("Nameless chat error");
-                            FirebaseCrash.report(e);
                             return "Nameless chat error";
                         }
                     }
