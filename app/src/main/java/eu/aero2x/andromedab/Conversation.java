@@ -191,6 +191,12 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
     @Override
     public void onResume() {
         super.onResume();
+
+        //Get our messages here. This is a very good place to reload messages since we get called at the end of onCreate
+        //but we also get called when we come back from sleep or backgrounding so we ought to refresh anyways
+        //messagesListAdapter.clear();
+        //setupMessages();
+
         if (socketClient != null && socketClient.socketThread.isCancelled() == false) {
             socketClient.socketThread.cancel(false);
         }
@@ -254,7 +260,8 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
     }
 
     private void setupMessages() {
-
+        //Now let's nab our messages. Setup data storage. We have to set this up ASAP because if we wait someone (will and has) tried to send messages before anything else loaded
+        messageDataStore = new ArrayList<>();
         RemoteMessagesInterface.getMessagesForConversation(Integer.valueOf(hash), this, new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
@@ -262,9 +269,7 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
                 try {
                     JSONArray messageBundle = new JSONArray(response);
 
-
-                    //Now let's nab our messages. Setup data storage
-                    messageDataStore = new ArrayList<>();
+                    //Stuff our messages
                     for (int i = 0; i != messageBundle.length(); i++) {
                         messageDataStore.addAll(parseMessageBundle(messageBundle.getJSONObject(i))); //Build our message list
                     }
