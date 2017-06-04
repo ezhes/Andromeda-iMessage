@@ -87,7 +87,6 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
             messagesList.setAdapter(messagesListAdapter);
 
             //Now we're ready, setup!
-            setupMessages();
         }else {
             UITools.showDismissableSnackBar(findViewById(android.R.id.content),"Missing conversation hash, did you launch normally?");
             Bundle bundle = new Bundle();
@@ -194,8 +193,9 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
 
         //Get our messages here. This is a very good place to reload messages since we get called at the end of onCreate
         //but we also get called when we come back from sleep or backgrounding so we ought to refresh anyways
-        //messagesListAdapter.clear();
-        //setupMessages();
+        messagesListAdapter.clear();
+        messagesListAdapter.notifyDataSetChanged();
+        setupMessages();
 
         if (socketClient != null && socketClient.socketThread.isCancelled() == false) {
             socketClient.socketThread.cancel(false);
