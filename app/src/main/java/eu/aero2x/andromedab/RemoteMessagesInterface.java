@@ -6,6 +6,7 @@ import android.util.Log;
 import com.android.internal.http.multipart.MultipartEntity;
 import com.android.internal.http.multipart.Part;
 import com.android.volley.AuthFailureError;
+import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
@@ -42,6 +43,12 @@ public class RemoteMessagesInterface {
 
         StringRequest stringRequester = new StringRequest(Request.Method.GET,API_URL + "/conversations?t=" + API_PROTECTION_TOKEN,onResponse,onError);
 
+        // change timeout to a more reasonable 10 seconds
+        stringRequester.setRetryPolicy(new DefaultRetryPolicy(
+                10000,
+                DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+                DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+
         // Add the request to the RequestQueue.
         queue.add(stringRequester);
     }
@@ -61,6 +68,13 @@ public class RemoteMessagesInterface {
                     return params;
                 }
             };
+
+            // change timeout to a more reasonable 10 seconds
+            stringRequester.setRetryPolicy(new DefaultRetryPolicy(
+                10000,
+                DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+                DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+
             // Add the request to the RequestQueue.
             queue.add(stringRequester);
 
