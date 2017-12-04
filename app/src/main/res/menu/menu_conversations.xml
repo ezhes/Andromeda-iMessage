@@ -1,9 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:id="@+id/openProjectPage"
-        android:title="Open project page"
-        android:showAsAction="ifRoom"/>
-    <item android:id="@+id/resetConfig"
-        android:title="Reset configuration..."
-        android:showAsAction="ifRoom"/>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/openProjectPage"
+        android:showAsAction="ifRoom"
+        android:title="Open project page" />
+    <item
+        android:id="@+id/refreshContent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:showAsAction="ifRoom"
+        android:title="Refresh" />
+    <item
+        android:id="@+id/settingsDialog"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:showAsAction="ifRoom"
+        android:title="Settings..." />
+    <item
+        android:id="@+id/resetConfig"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:showAsAction="ifRoom"
+        android:title="Reset configuration..." />
 </menu>
