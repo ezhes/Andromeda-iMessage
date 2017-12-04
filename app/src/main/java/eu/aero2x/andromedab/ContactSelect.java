@@ -305,7 +305,7 @@ public class ContactSelect extends AppCompatActivity {
             @Override
             public String format(Date date) {
                 if (DateFormatter.isToday(date)) {
-                    return DateFormatter.format(date, DateFormatter.Template.TIME);
+                    return DateFormatter.format(date, "h:mm a");
                 } else if (DateFormatter.isYesterday(date)) {
                     return getString(R.string.yesterday);
                 } else {
