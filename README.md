@@ -1,11 +1,17 @@
 # Andromeda(B)
-A client for the [MessageProxy Server](https://github.com/shusain93/OSXMessageProxy) so as to provide an entirely open source implementation of iMessage on Android!  This is derived from Salman Husain's version and adds a few new features!
+A client for the [MessageProxy Server](https://github.com/shusain93/OSXMessageProxy) so as to provide an entirely open source implementation of iMessage on Android!
 
-### New Features
+### Features
 
-1. Update Settings whenever you want rather than first run.  Launch from action menu.
-2. More sophisticated time/date display for conversation list
-2. Refresh conversation list option in action menu.
+1. Getting and sending messages
+2. Delivery status/read status
+2. **GROUP CHATS!** This includes named and unnamed iMessage group chats (i.e. Person 1, person 2, person 3 AND "The Sushi Brigade")
+3. Loading of attachments of any type (images are inline). *todo:* allow sending!
+4. Live messaging (with sockets!)
+
+A named iMessage Group|  Inline photos!
+:-------------------------:|:-------------------------:
+![image](Screenshots/Screenshot_20170428-005529.png)  | ![image](Screenshots/Screenshot_20170428-005453.png)
 
 ### Configuration / Setup!
 
@@ -18,4 +24,4 @@ A client for the [MessageProxy Server](https://github.com/shusain93/OSXMessagePr
 
 #### Crash reporting/analytics
 
-As this still is functionally Salman's app, the firebase reporting still sends data to him.  Let him (and me) know if your issue happens on one of my builds.
+I have setup Firebase crash and session analytics. Nothing personally identifiable is being stolen away (you can check through the code!) but if you are still not comfortable with this you can easily disable tracking globally by editing `AndroidManifest.xml`'s `firebase_analytics_collection_deactivated` key to be `true`. Given that this is beta, I'd recommend that you don't do this since I need crash reporting to make this better but I of course realize that messaging is a very sensitive data.
