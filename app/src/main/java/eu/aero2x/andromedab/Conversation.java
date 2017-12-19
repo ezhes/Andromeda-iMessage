@@ -3,11 +3,14 @@ package eu.aero2x.andromedab;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.net.Uri;
+import android.provider.MediaStore;
 import android.support.customtabs.CustomTabsIntent;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Base64;
 import android.util.Log;
 import android.widget.ImageView;
 
@@ -26,6 +29,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 
@@ -43,6 +48,8 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
     private FirebaseAnalytics mFirebaseAnalytics;
 
     private String latestConversationData = "";
+
+    public static final int PICK_IMAGE = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -163,9 +170,96 @@ public class Conversation extends AppCompatActivity implements MessagesListAdapt
                 return true;
             }
         });
+
+        // Add attachment listener
+        inputView.setAttachmentsListener(new MessageInput.AttachmentsListener() {
+
+            @Override
+            public void onAddAttachments() {
+                Intent intent = new Intent();
+                intent.setType("image/*");
+                intent.setAction(Intent.ACTION_GET_CONTENT);
+                startActivityForResult(Intent.createChooser(intent, "Select Picture"), PICK_IMAGE);
+            }
+
+        });
     }
 
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data)
+    {
+        if (requestCode == PICK_IMAGE && data != null) {
 
+            Uri imageUri = data.getData();
+            String encodedImage = "";
+            try {
+                Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), imageUri);
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos); //bm is the bitmap object
+                byte[] b = baos.toByteArray();
+                encodedImage = Base64.encodeToString(b, Base64.DEFAULT);
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+
+
+            //Create our pseudo message string
+            String messageString = "{\n" +
+                    "    \"sender\" : \"0\",\n" +
+                    "    \"human_name\" : \" \",\n" +
+                    "    \"date_read\" : 0,\n" +
+                    "    \"message_id\" : 0000,\n" +
+                    "    \"date\" : "+ ((System.currentTimeMillis())/1000-978307200L) + ",\n" + //Convert epoch to cocoa
+                    "    \"text\" : \"" + "\",\n" + //manually escape for JSON. It's bad but unexploitable
+                    "    \"is_from_me\" : 1,\n" +
+                    "    \"error\" : -23813,\n" +
+                    "    \"guid\" : \"notSent"+ (int)(Math.random()*2000) + "\",\n" + //random bit so we can be sure we replace the right GUID
+                    "    \"date_delivered\" : 0,\n" +
+                    "    \"is_sent\" : 0,\n" +
+                    "    \"has_attachments\" : false\n " +
+                    "  }";
+            System.out.println("TIMESTAMP:" + ((System.currentTimeMillis())/1000-978307200L));
+            try {
+                JSONObject messageBundle = new JSONObject(messageString);
+                //"convert" our json into messages. This is wasteful but updates everything I've already set up to keep last back properly
+                ArrayList<Message> newMessages = parseMessageBundle(messageBundle);
+                //Add it to the view
+                messagesListAdapter.addToStart(newMessages.get(0), true);
+                messageDataStore.add(0,newMessages.get(0));
+                String recipients;
+                if (hashManualCustomName) {
+                    recipients = IDs;
+                    System.out.println("WE HAVE A CUSTOM NAME " + IDs);
+                }else {
+                    recipients = displayName;
+                    System.out.println("NO HAVE A CUSTOM NAME " + displayName);
+                }
+
+                RemoteMessagesInterface.sendAttachment(recipients, encodedImage,parentConversation.getBoolean("has_manual_display_name"),Conversation.this,new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        //The message sent!
+                        UITools.showSnackBar(findViewById(android.R.id.content),"Dispatched!", Snackbar.LENGTH_SHORT);
+
+
+                    }
+                },  new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        //We couldn't connect, die.
+                        String err = (error.toString()==null)?"Generic network error":error.toString();
+                        UITools.showDismissableSnackBar(findViewById(android.R.id.content),"Unable to send message! Copied!\n" + err);
+                    }
+                });
+            }catch (JSONException e) {
+                //We should never get here. The json is manually generated and works
+                e.printStackTrace();
+                UITools.showDismissableSnackBar(findViewById(android.R.id.content),"Somethings really broke\nThe JSON send generator broke!");
+            }
+        }
+    }
 
     @Override
     public void onPause() {

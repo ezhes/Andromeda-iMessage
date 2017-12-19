@@ -1,24 +1,24 @@
 package eu.aero2x.andromedab;
 
-import android.content.Context;
-import android.util.Log;
+        import android.content.Context;
+        import android.util.Log;
 
-import com.android.internal.http.multipart.MultipartEntity;
-import com.android.internal.http.multipart.Part;
-import com.android.volley.AuthFailureError;
-import com.android.volley.DefaultRetryPolicy;
-import com.android.volley.Request;
-import com.android.volley.RequestQueue;
-import com.android.volley.Response;
-import com.android.volley.toolbox.StringRequest;
-import com.android.volley.toolbox.Volley;
+        import com.android.internal.http.multipart.MultipartEntity;
+        import com.android.internal.http.multipart.Part;
+        import com.android.volley.AuthFailureError;
+        import com.android.volley.DefaultRetryPolicy;
+        import com.android.volley.Request;
+        import com.android.volley.RequestQueue;
+        import com.android.volley.Response;
+        import com.android.volley.toolbox.StringRequest;
+        import com.android.volley.toolbox.Volley;
 
-import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.util.HashMap;
-import java.util.Map;
+        import java.io.UnsupportedEncodingException;
+        import java.net.HttpURLConnection;
+        import java.net.URL;
+        import java.net.URLEncoder;
+        import java.util.HashMap;
+        import java.util.Map;
 
 /**
  * Created by Salman on 11/27/16.
@@ -57,26 +57,26 @@ public class RemoteMessagesInterface {
     public static void getMessagesForConversation (final int conversationID, Context context, Response.Listener<String> onResponse, Response.ErrorListener onError) {
         // Instantiate the RequestQueue.
         RequestQueue queue = Volley.newRequestQueue(context);
-            StringRequest stringRequester = new StringRequest(Request.Method.POST, API_URL + "/messages", onResponse, onError){
-                @Override
-                public Map<String, String> getParams() throws AuthFailureError {
-                    Map<String, String>  params = new HashMap<String, String>();
-                    //afterID is how we send what we want in our request
-                    params.put("conversationID", "" + conversationID);
-                    params.put("t",APP_CONSTANTS.SERVER_PROTECTION_TOKEN);
+        StringRequest stringRequester = new StringRequest(Request.Method.POST, API_URL + "/messages", onResponse, onError){
+            @Override
+            public Map<String, String> getParams() throws AuthFailureError {
+                Map<String, String>  params = new HashMap<String, String>();
+                //afterID is how we send what we want in our request
+                params.put("conversationID", "" + conversationID);
+                params.put("t",APP_CONSTANTS.SERVER_PROTECTION_TOKEN);
 
-                    return params;
-                }
-            };
+                return params;
+            }
+        };
 
-            // change timeout to a more reasonable 10 seconds
-            stringRequester.setRetryPolicy(new DefaultRetryPolicy(
+        // change timeout to a more reasonable 10 seconds
+        stringRequester.setRetryPolicy(new DefaultRetryPolicy(
                 10000,
                 DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
                 DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
 
-            // Add the request to the RequestQueue.
-            queue.add(stringRequester);
+        // Add the request to the RequestQueue.
+        queue.add(stringRequester);
 
     }
 
@@ -88,6 +88,23 @@ public class RemoteMessagesInterface {
                 Map<String, String> params = new HashMap<String, String>();
                 params.put("participants",recipients);
                 params.put("message", message);
+                params.put("hasCustomName",hasCustomName ? "true" : "false");
+                params.put("t",APP_CONSTANTS.SERVER_PROTECTION_TOKEN);
+                return params;
+            }
+        };
+        // Add the request to the RequestQueue.
+        queue.add(stringRequester);
+    }
+
+    public static void sendAttachment (final String recipients, final String encodedImage, final boolean hasCustomName, Context context, Response.Listener<String> onResponse, Response.ErrorListener onError) {
+        RequestQueue queue = Volley.newRequestQueue(context);
+        StringRequest stringRequester = new StringRequest(Request.Method.POST, API_URL + "/sendAttachment", onResponse, onError) {
+
+            protected Map<String, String> getParams() throws com.android.volley.AuthFailureError {
+                Map<String, String> params = new HashMap<String, String>();
+                params.put("participants",recipients);
+                params.put("attachment", encodedImage);
                 params.put("hasCustomName",hasCustomName ? "true" : "false");
                 params.put("t",APP_CONSTANTS.SERVER_PROTECTION_TOKEN);
                 return params;
