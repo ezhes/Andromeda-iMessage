@@ -31,6 +31,7 @@ import com.stfalcon.chatkit.commons.models.IMessage;
 import com.stfalcon.chatkit.commons.models.IUser;
 import com.stfalcon.chatkit.dialogs.DialogsList;
 import com.stfalcon.chatkit.dialogs.DialogsListAdapter;
+import com.stfalcon.chatkit.utils.DateFormatter;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -94,77 +95,7 @@ public class ContactSelect extends AppCompatActivity {
         final SharedPreferences sharedPreferences = getSharedPreferences("CONFIG",MODE_PRIVATE);
         //Check if we are not yet setup
         if (sharedPreferences.getString("apiIPEndpoint",null) == null) {
-            AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            //you should edit this to fit your needs
-            builder.setTitle("Andromeda Configuration");
-            builder.setMessage("To use Andromeda you must have a server running OSXMessageProxy. \n\nIf you make a mistake, open the menu up top and choose 'Reset configuration...'");
-
-            final EditText apiIPEndPoint = new EditText(this);
-            apiIPEndPoint.setHint("your.domain.com or 182.123.321.164");
-            final EditText apiPort = new EditText(this);
-            apiPort.setHint("API port (default:8735)");
-            final EditText socketPort = new EditText(this);
-            socketPort.setHint("Socket port (default:8736)");
-            final EditText apiProtectionKey = new EditText(this);
-            apiProtectionKey.setHint("API key EXACTLY as in server");
-            //Check if we have an old stored key so we can load that back
-            String oldProtectionKey = sharedPreferences.getString("apiProtectionKey",null);
-            if (oldProtectionKey != null) {
-                apiProtectionKey.setText(oldProtectionKey);
-            }
-
-            //in my example i use TYPE_CLASS_NUMBER for input only numbers
-            apiIPEndPoint.setInputType(InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS);
-            apiProtectionKey.setInputType(InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-            apiPort.setInputType(InputType.TYPE_CLASS_NUMBER);
-            socketPort.setInputType(InputType.TYPE_CLASS_NUMBER);
-
-            LinearLayout lay = new LinearLayout(this);
-            lay.setOrientation(LinearLayout.VERTICAL);
-            lay.addView(apiIPEndPoint);
-            lay.addView(apiPort);
-            lay.addView(socketPort);
-            lay.addView(apiProtectionKey);
-            builder.setView(lay);
-
-            // Set up the buttons
-            builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                public void onClick(DialogInterface dialog, int whichButton) {
-                    String givenEndPoint = apiIPEndPoint.getText().toString().trim();
-                    String givenKey = apiProtectionKey.getText().toString().trim();
-
-                    String apiPortText = apiPort.getText().toString().trim();
-                    if (apiPortText.equals("")) {
-                        //No API port given, default
-                        apiPortText = "8735";
-                    }
-                    String socketPortText = socketPort.getText().toString().trim();
-                    if (socketPortText.equals("")) {
-                        //No socket port given, default
-                        socketPortText = "8736";
-                    }
-
-                    int givenAPIPort = Integer.valueOf(apiPortText);
-                    int givenSocketPort = Integer.valueOf(socketPortText);
-
-                    SharedPreferences.Editor editor = getSharedPreferences("CONFIG", MODE_PRIVATE).edit();
-                    editor.putString("apiIPEndpoint",givenEndPoint);
-                    editor.putInt("apiPort",givenAPIPort);
-                    editor.putInt("socketPort",givenSocketPort);
-                    editor.putString("apiProtectionKey",givenKey);
-                    //Write sync because we need this done before we can keep going
-                    editor.commit();
-                    //We're ready
-                    prepareView();
-                }
-            });
-
-            builder.setNegativeButton("Exit", new DialogInterface.OnClickListener() {
-                public void onClick(DialogInterface dialog, int whichButton) {
-                    finishAffinity();
-                }
-            });
-            builder.show();
+            settingsDialog(true);
         }else {
             //We have already configured
             prepareView();
@@ -222,9 +153,117 @@ public class ContactSelect extends AppCompatActivity {
                 customTabsIntent.launchUrl(ContactSelect.this, Uri.parse("https://github.com/shusain93/Andromeda-iMessage"));
 
                 return true;
+            case R.id.settingsDialog:
+                settingsDialog(false);
+
+                return true;
+            case R.id.refreshContent:
+                prepareView();
+
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    private void settingsDialog(boolean firstTime ) {
+        //Load our config database
+        final SharedPreferences sharedPreferences = getSharedPreferences("CONFIG",MODE_PRIVATE);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        //you should edit this to fit your needs
+        builder.setTitle("Andromeda Configuration");
+        builder.setMessage("To use Andromeda you must have a server running OSXMessageProxy. \n\nIf you make a mistake, open the menu up top and choose 'Reset configuration...'");
+
+        final EditText apiIPEndPoint = new EditText(this);
+        apiIPEndPoint.setHint("your.domain.com or 182.123.321.164");
+        String oldIP = sharedPreferences.getString("apiIPEndpoint", null);
+        if ( oldIP != null )
+            apiIPEndPoint.setText(oldIP);
+
+        final EditText apiPort = new EditText(this);
+        apiPort.setHint("API port (default:8735)");
+        if ( !firstTime ) {
+            int oldAPIPort = sharedPreferences.getInt("apiPort", 8735);
+            apiPort.setText(String.valueOf(oldAPIPort));
+        }
+
+        final EditText socketPort = new EditText(this);
+        socketPort.setHint("Socket port (default:8736)");
+        if ( !firstTime ) {
+            int oldSocketPort = sharedPreferences.getInt("socketPort", 8736);
+            socketPort.setText(String.valueOf(oldSocketPort));
+        }
+
+        final EditText apiProtectionKey = new EditText(this);
+        apiProtectionKey.setHint("API key EXACTLY as in server");
+        //Check if we have an old stored key so we can load that back
+        String oldProtectionKey = sharedPreferences.getString("apiProtectionKey", null);
+        if (oldProtectionKey != null) {
+            apiProtectionKey.setText(oldProtectionKey);
+        }
+
+        //in my example i use TYPE_CLASS_NUMBER for input only numbers
+        apiIPEndPoint.setInputType(InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS);
+        apiProtectionKey.setInputType(InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        apiPort.setInputType(InputType.TYPE_CLASS_NUMBER);
+        socketPort.setInputType(InputType.TYPE_CLASS_NUMBER);
+
+        LinearLayout lay = new LinearLayout(this);
+        lay.setOrientation(LinearLayout.VERTICAL);
+        lay.addView(apiIPEndPoint);
+        lay.addView(apiPort);
+        lay.addView(socketPort);
+        lay.addView(apiProtectionKey);
+        builder.setView(lay);
+
+        // Set up the buttons
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int whichButton) {
+                String givenEndPoint = apiIPEndPoint.getText().toString().trim();
+                String givenKey = apiProtectionKey.getText().toString().trim();
+
+                String apiPortText = apiPort.getText().toString().trim();
+                if (apiPortText.equals("")) {
+                    //No API port given, default
+                    apiPortText = "8735";
+                }
+                String socketPortText = socketPort.getText().toString().trim();
+                if (socketPortText.equals("")) {
+                    //No socket port given, default
+                    socketPortText = "8736";
+                }
+
+                int givenAPIPort = Integer.valueOf(apiPortText);
+                int givenSocketPort = Integer.valueOf(socketPortText);
+
+                SharedPreferences.Editor editor = getSharedPreferences("CONFIG", MODE_PRIVATE).edit();
+                editor.putString("apiIPEndpoint", givenEndPoint);
+                editor.putInt("apiPort", givenAPIPort);
+                editor.putInt("socketPort", givenSocketPort);
+                editor.putString("apiProtectionKey", givenKey);
+                //Write sync because we need this done before we can keep going
+                editor.commit();
+                //We're ready
+                prepareView();
+            }
+        });
+
+        if ( firstTime ) {
+            builder.setNegativeButton("Exit", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int whichButton) {
+                    finishAffinity();
+                }
+            });
+        }
+        else {
+            builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int whichButton) {
+                }
+            });
+
+        }
+        builder.show();
     }
 
     private void prepareView() {
@@ -259,6 +298,19 @@ public class ContactSelect extends AppCompatActivity {
                 Intent i = new Intent(getApplicationContext(), Conversation.class);
                 i.putExtra("conversationJSONString", conversationDataSource.get(Integer.valueOf(dialog.getId())).toString()); //send our conversation's JSON along
                 startActivityForResult(i, UITools.DATA_NEEDS_REFRESH);
+            }
+        });
+
+        dialogsListAdapter.setDatesFormatter( new DateFormatter.Formatter() {
+            @Override
+            public String format(Date date) {
+                if (DateFormatter.isToday(date)) {
+                    return DateFormatter.format(date, "h:mm a");
+                } else if (DateFormatter.isYesterday(date)) {
+                    return getString(R.string.yesterday);
+                } else {
+                    return DateFormatter.format(date, DateFormatter.Template.STRING_DAY_MONTH_YEAR);
+                }
             }
         });
         dialogsListView.setAdapter(dialogsListAdapter,false);
