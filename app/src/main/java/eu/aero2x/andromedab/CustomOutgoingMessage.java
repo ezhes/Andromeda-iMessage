@@ -13,7 +13,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
- * Created by Salman on 2/17/17.
+ * Created by Allison on 2/17/17.
  */
 
 public class CustomOutgoingMessage extends MessagesListAdapter.OutcomingMessageViewHolder<Message> {

@@ -1,7 +1,7 @@
 package eu.aero2x.andromedab;
 
 /**
- * Created by Salman on 3/12/17.
+ * Created by Allison on 3/12/17.
  */
 
 public class APP_CONSTANTS {

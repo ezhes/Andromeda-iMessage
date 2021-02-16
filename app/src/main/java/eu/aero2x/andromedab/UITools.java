@@ -9,7 +9,7 @@ import android.support.design.widget.Snackbar;
 import android.view.View;
 
 /**
- * Created by Salman on 2/17/17.
+ * Created by Allison on 2/17/17.
  */
 
 public class UITools {

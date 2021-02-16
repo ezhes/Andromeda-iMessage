@@ -11,7 +11,7 @@ A client for the [MessageProxy Server](https://github.com/shusain93/OSXMessagePr
 
 A named iMessage Group|  Inline photos!
 :-------------------------:|:-------------------------:
-![image](Screenshots/Screenshot_20170428-005529.png)  | ![image](Screenshots/Screenshot_20170428-005453.png)
+![image](Screenshots/Screenshot_20170428-005529.png)  | ![image](Screenshots/Screenshot_20170428-0054531.jpeg)
 
 ### Configuration / Setup!
 
